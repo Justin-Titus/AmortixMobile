@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "Amortix",
+    "slug": "amortix",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/Amortix.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "scheme": "amortix",
+    "splash": {
+      "image": "./assets/Amortix.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0d1b2f"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.amortix.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/Amortix.png",
+        "backgroundColor": "#0d1b2f"
+      },
+      "edgeToEdgeEnabled": true,
+      "package": "com.amortix.app"
+    },
+    "web": {
+      "favicon": "./assets/Amortix.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-secure-store",
+      "@react-native-community/datetimepicker"
+    ]
+  }
+}
