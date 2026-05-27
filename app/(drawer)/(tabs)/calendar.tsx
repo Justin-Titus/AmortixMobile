@@ -210,7 +210,7 @@ export default function CalendarScreen() {
                   <Typography weight="bold" color="navy" fontFamily="heading">{formatCurrency(l.emiAmount)}</Typography>
                 </View>
                 <View style={styles.dueStatus}>
-                  <Typography variant="xs" weight="bold" color={l.status === 'paid' ? Colors.emerald : l.status === 'overdue' ? Colors.red : Colors.amber}>
+                  <Typography variant="xs" weight="bold" color={l.status === 'paid' ? 'emerald' : l.status === 'overdue' ? 'red' : 'amber'}>
                     {l.status.toUpperCase()}
                   </Typography>
                   <Typography variant="xs" color="slate">Paid {formatCurrency(l.paidAmount)}</Typography>

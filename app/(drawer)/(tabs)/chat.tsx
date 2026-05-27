@@ -1,7 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View, TextInput, TouchableOpacity, FlatList,
-  KeyboardAvoidingView, Platform, StyleSheet, ActivityIndicator,
+  KeyboardAvoidingView, Platform, StyleSheet, ActivityIndicator, Keyboard,
 } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { Colors, Spacing, Radius, Shadows } from '@/constants/theme';
@@ -19,6 +19,23 @@ export default function ChatScreen() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const flatListRef = useRef<FlatList>(null);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const showSubscription = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => setKeyboardVisible(true)
+    );
+    const hideSubscription = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setKeyboardVisible(false)
+    );
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
 
   const sendMessage = async () => {
     const text = input.trim();
@@ -31,7 +48,7 @@ export default function ChatScreen() {
     setLoading(true);
 
     try {
-      const appUrl = process.env.EXPO_PUBLIC_APP_URL || 'http://localhost:3000';
+      const appUrl = (typeof process !== 'undefined' ? (process.env as any).EXPO_PUBLIC_APP_URL : '') || 'http://localhost:3000';
       const { data: { session } } = await supabase.auth.getSession();
 
       const res = await fetch(`${appUrl}/api/chat`, {
@@ -85,7 +102,7 @@ export default function ChatScreen() {
   };
 
   const renderMessage = ({ item }: { item: Message }) => (
-    <View style={[s.msgRow, item.role === 'user' ? s.msgRowUser : s.msgRowAi]}>
+    <View style={[s.msgRow, item.role === 'user' && s.msgRowUser]}>
       <View style={item.role === 'user' ? s.userIcon : s.aiIcon}>
         {item.role === 'user'
           ? <User size={14} color={Colors.white} />
@@ -104,7 +121,7 @@ export default function ChatScreen() {
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
-        keyboardVerticalOffset={90}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
         {messages.length === 0 ? (
           <View style={s.emptyChat}>
@@ -138,7 +155,7 @@ export default function ChatScreen() {
         )}
 
         {/* Input */}
-        <View style={s.inputContainer}>
+        <View style={[s.inputContainer, { paddingBottom: keyboardVisible ? (Platform.OS === 'ios' ? 12 : 8) : 90 }]}>
           <View style={s.inputBar}>
             <TextInput
               style={s.input}

@@ -24,8 +24,15 @@ import {
   IBMPlexMono_500Medium
 } from '@expo-google-fonts/ibm-plex-mono';
 
+import { usePushNotifications } from '@/hooks/usePushNotifications';
+
 // Prevent splash from hiding until we're ready
 SplashScreen.preventAutoHideAsync();
+
+function NotificationInitializer() {
+  usePushNotifications();
+  return null;
+}
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
@@ -55,6 +62,7 @@ export default function RootLayout() {
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
         <AuthProvider>
+          <NotificationInitializer />
           <StatusBar style="dark" />
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="(auth)" />

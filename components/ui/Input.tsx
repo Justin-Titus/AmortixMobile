@@ -6,6 +6,7 @@ import {
   StyleSheet,
   type TextInputProps,
   type ViewStyle,
+  type StyleProp,
 } from 'react-native';
 import { Colors, Radius, FontSizes, Spacing, FontFamilies } from '@/constants/theme';
 import Typography from './Typography';
@@ -17,7 +18,7 @@ type InputProps = TextInputProps & {
   icon?: React.ReactNode;
   rightIcon?: React.ReactNode;
   onRightIconPress?: () => void;
-  containerStyle?: ViewStyle;
+  containerStyle?: StyleProp<ViewStyle>;
 };
 
 /**

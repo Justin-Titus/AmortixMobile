@@ -6,6 +6,7 @@ import {
   StyleSheet,
   type ViewStyle,
   type TextStyle,
+  type StyleProp,
 } from 'react-native';
 import { Colors, Radius, Shadows } from '@/constants/theme';
 import Typography from './Typography';
@@ -17,7 +18,7 @@ type ButtonProps = {
   loading?: boolean;
   disabled?: boolean;
   icon?: React.ReactNode;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
   textStyle?: TextStyle;
   size?: 'default' | 'sm';
 };

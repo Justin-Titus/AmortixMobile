@@ -187,7 +187,7 @@ export default function InsightsScreen() {
                         Risk Level: <Typography variant="caption" weight="bold" color={getRiskColor(row.risk.riskLevel)}>{row.risk.riskLevel.toUpperCase()}</Typography>
                       </Typography>
                     </View>
-                    <View style={[styles.riskScore, { borderColor: getRiskColor(row.risk.riskLevel) }]}>
+                    <View style={[styles.riskScore, { borderColor: Colors[getRiskColor(row.risk.riskLevel)] }]}>
                       <Typography variant="md" weight="bold" color={getRiskColor(row.risk.riskLevel)}>{row.risk.riskScore}</Typography>
                     </View>
                   </View>
@@ -217,7 +217,7 @@ export default function InsightsScreen() {
                       <Typography variant="caption" color="slate">{leak.loanName}</Typography>
                     </View>
                     <View style={[styles.severityBadge, { backgroundColor: leak.severity === 'high' ? '#fee2e2' : '#fef3c7' }]}>
-                      <Typography variant="xs" weight="bold" color={leak.severity === 'high' ? Colors.red : Colors.amber}>
+                      <Typography variant="xs" weight="bold" color={leak.severity === 'high' ? 'red' : 'amber'}>
                         {leak.severity.toUpperCase()}
                       </Typography>
                     </View>
@@ -288,10 +288,10 @@ function HeroSection({ totals }: { totals: any }) {
 
 function getRiskColor(level: string) {
   switch (level) {
-    case 'critical': return Colors.red;
-    case 'high': return Colors.amber;
-    case 'medium': return Colors.slate;
-    default: return Colors.emerald;
+    case 'critical': return 'red';
+    case 'high': return 'amber';
+    case 'medium': return 'slate';
+    default: return 'emerald';
   }
 }
 
@@ -332,6 +332,7 @@ const styles = StyleSheet.create({
   section: { gap: Spacing.md },
   sectionTitle: { marginLeft: 4 },
   riskCard: { padding: Spacing.md },
+  riskLoanName: { marginBottom: 4 },
   riskHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: Spacing.md },
   riskScore: {
     width: 44, height: 44, borderRadius: 22, borderWidth: 2,

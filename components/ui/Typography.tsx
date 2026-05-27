@@ -5,14 +5,14 @@ import { Colors, FontSizes, FontFamilies } from '@/constants/theme';
 export type TypographyVariant = 
   | 'hero' 
   | 'h1' | 'h2' | 'h3' 
-  | 'lg' | 'base' | 'md' | 'body' | 'caption' | 'sm' | 'xs';
+  | 'xl' | 'lg' | 'base' | 'md' | 'body' | 'caption' | 'sm' | 'xs';
 
 export type TypographyWeight = 'regular' | 'medium' | 'semiBold' | 'bold';
 
 export interface TypographyProps extends TextProps {
   variant?: TypographyVariant;
   weight?: TypographyWeight;
-  color?: keyof typeof Colors;
+  color?: keyof typeof Colors | string;
   align?: 'left' | 'center' | 'right';
   fontFamily?: 'heading' | 'body' | 'mono';
 }
@@ -64,7 +64,7 @@ const Typography: React.FC<TypographyProps> = ({
   const textStyle: TextStyle = {
     fontSize: FontSizes[variant],
     fontFamily: getFontFamily(),
-    color: Colors[color] || color, // Fallback to literal color if not in theme
+    color: (Colors as any)[color] || color, // Fallback to literal color if not in theme
     textAlign: align,
     includeFontPadding: false,
     textAlignVertical: 'center',

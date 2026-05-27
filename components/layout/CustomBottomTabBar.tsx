@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, TouchableOpacity, StyleSheet, Keyboard, Platform } from 'react-native';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { usePathname } from 'expo-router';
@@ -23,12 +23,29 @@ const VISIBLE_TABS = ['dashboard', 'loans', 'strategy', 'analysis', 'chat'];
 export default function CustomBottomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const pathname = usePathname();
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const showSubscription = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => setKeyboardVisible(true)
+    );
+    const hideSubscription = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setKeyboardVisible(false)
+    );
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
   
   // Pages where we want to hide the bottom navbar
   const hiddenOn = ['/edit-profile', '/loans/add', '/loans/'];
   const isHidden = hiddenOn.some(path => pathname.includes(path)) && !pathname.endsWith('/loans');
 
-  if (isHidden) return null;
+  if (isHidden || keyboardVisible) return null;
 
   // Base padding plus safe area, matching web: pb-[max(8px,env(safe-area-inset-bottom))]
   const paddingBottom = Math.max(8, insets.bottom);

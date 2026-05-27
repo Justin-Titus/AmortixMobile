@@ -1,11 +1,11 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   View, ScrollView, RefreshControl, TouchableOpacity, StyleSheet,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { getLoans, type LoanRecord } from '@/services/loans';
-import { getProfile, type FinancialProfile } from '@/services/profile';
+import { getProfile, getHealthSnapshots, type FinancialProfile, type HealthSnapshot } from '@/services/profile';
 import { MetricCard } from '@/components/ui/MetricCard';
 import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -14,8 +14,13 @@ import Typography from '@/components/ui/Typography';
 import { Colors, Spacing, Radius } from '@/constants/theme';
 import { formatCurrency, formatCompactCurrency } from '@/lib/calculations/emi';
 import {
-  Sparkles, ArrowRight, Plus, MessageSquarePlus, AlertTriangle,
+  Sparkles, ArrowRight, Plus, MessageSquarePlus, AlertTriangle, TrendingUp,
 } from 'lucide-react-native';
+import { calculateAffordabilityScore } from '@/lib/calculations/affordability';
+import { calculateStrategy } from '@/lib/calculations/strategies';
+import AffordabilityGauge from '@/components/dashboard/AffordabilityGauge';
+import DebtDistribution from '@/components/dashboard/DebtDistribution';
+import HealthTrendChart from '@/components/analysis/HealthTrendChart';
 
 const loanColors = ['#1E3A5F', '#059669', '#F59E0B', '#378ADD', '#DC2626', '#34D399'];
 
@@ -24,13 +29,19 @@ export default function DashboardScreen() {
   const router = useRouter();
   const [loans, setLoans] = useState<LoanRecord[]>([]);
   const [profile, setProfile] = useState<FinancialProfile | null>(null);
+  const [snapshots, setSnapshots] = useState<HealthSnapshot[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadData = useCallback(async () => {
-    const [loansData, profileData] = await Promise.all([getLoans(), getProfile()]);
+    const [loansData, profileData, snapshotsData] = await Promise.all([
+      getLoans(),
+      getProfile(),
+      getHealthSnapshots()
+    ]);
     setLoans(loansData);
     setProfile(profileData);
+    setSnapshots(snapshotsData);
   }, []);
 
   useFocusEffect(
@@ -57,6 +68,7 @@ export default function DashboardScreen() {
   const emiToIncomeRatio = profile?.monthlyIncome
     ? Math.round((totalEMI / profile.monthlyIncome) * 100) : 0;
 
+
   const greeting = (() => {
     const h = new Date().getHours();
     if (h < 12) return 'Good morning';
@@ -65,6 +77,79 @@ export default function DashboardScreen() {
   })();
 
   const firstName = (user?.user_metadata?.full_name ?? 'there').split(' ')[0];
+
+  const affordability = useMemo(() => {
+    if (!profile?.monthlyIncome || profile.monthlyIncome <= 0) return null;
+    return calculateAffordabilityScore({
+      monthlyIncome: profile.monthlyIncome,
+      monthlyExpenses: profile.monthlyExpenses,
+      totalMonthlyEMI: totalEMI,
+      creditScoreRange: profile.creditScoreRange ?? 'Not provided',
+      hasEmergencyFund: Boolean(profile.hasEmergencyFund),
+      emergencyFundMonths: profile.emergencyFundMonths ?? 0,
+      loans: loans.map(l => ({
+        annualRate: l.interestRate,
+        tenureMonths: l.tenureMonths,
+        rateType: l.rateType,
+      })),
+    });
+  }, [loans, profile, totalEMI]);
+
+  const strategyResults = useMemo(() => {
+    if (!hasLoans) return null;
+    const strategyLoans = loans
+      .filter(l => l.outstandingBalance > 0 && l.emiAmount > 0)
+      .map(l => ({
+        id: l.id,
+        name: l.name,
+        outstanding: l.outstandingBalance,
+        annualRate: l.interestRate,
+        emi: l.emiAmount,
+      }));
+    if (strategyLoans.length === 0) return null;
+    
+    return {
+      avalanche: calculateStrategy(strategyLoans, 0, 'avalanche'),
+      snowball: calculateStrategy(strategyLoans, 0, 'snowball'),
+      baseline: calculateStrategy(strategyLoans, 0, 'avalanche'), // Minimum payments
+    };
+  }, [loans, hasLoans]);
+
+  const dynamicInsight = useMemo(() => {
+    if (!hasLoans) return 'Add your first loan to see AI-powered debt insights.';
+    if (!strategyResults) return 'Calculating payoff strategies...';
+
+    const parts: string[] = [];
+    const avalancheSaved = strategyResults.baseline.totalInterestPaid - strategyResults.avalanche.totalInterestPaid;
+    const snowballSaved = strategyResults.baseline.totalInterestPaid - strategyResults.snowball.totalInterestPaid;
+    
+    const best = avalancheSaved >= snowballSaved ? 'Avalanche' : 'Snowball';
+    const saved = Math.max(avalancheSaved, snowballSaved);
+    const months = strategyResults.baseline.monthsToPayoff - Math.min(strategyResults.avalanche.monthsToPayoff, strategyResults.snowball.monthsToPayoff);
+
+    if (saved > 0) {
+      parts.push(`Optimal strategy (${best}) saves you ${formatCurrency(saved)}.`);
+    }
+    if (months > 0) {
+      parts.push(`You can be debt-free ${months} months earlier.`);
+    }
+    if (affordability) {
+      parts.push(`Financial health is in the ${affordability.zone.toLowerCase()} zone.`);
+    }
+
+    return parts.join(' ') || `Managing ${formatCurrency(totalOutstanding)} across ${loans.length} active loans.`;
+  }, [hasLoans, strategyResults, affordability, totalOutstanding, loans.length]);
+
+
+  const distributionData = useMemo(() => {
+    return loans
+      .filter(l => l.outstandingBalance > 0)
+      .map((l, i) => ({
+        name: l.name,
+        balance: l.outstandingBalance,
+        color: loanColors[i % loanColors.length],
+      }));
+  }, [loans]);
 
   if (loading) {
     return (
@@ -129,7 +214,7 @@ export default function DashboardScreen() {
         {emiToIncomeRatio > 100 ? (
           <View style={s.criticalBanner}>
             <AlertTriangle size={14} color="#dc2626" />
-            <Typography variant="caption" weight="bold" color="#b91c1c">
+            <Typography variant="caption" weight="bold" color="red">
               Critical: EMI exceeds your monthly income.
             </Typography>
           </View>
@@ -137,9 +222,7 @@ export default function DashboardScreen() {
           <View style={s.insightBanner}>
             <View style={s.insightDot} />
             <Typography variant="sm" weight="medium" color="navy" style={s.insightText} numberOfLines={2}>
-              Dynamic insight: {loans.reduce((b, c) => c.interestRate > b.interestRate ? c : b).interestRate > 12
-                ? `Highest-cost loan at ${loans.reduce((b, c) => c.interestRate > b.interestRate ? c : b).interestRate}% — prioritize it.`
-                : `Your EMI load is at ${emiToIncomeRatio}% of income.`}
+              {dynamicInsight}
             </Typography>
           </View>
         ) : null}
@@ -159,6 +242,11 @@ export default function DashboardScreen() {
           description={debtFreeDate ? 'With current strategy' : 'Add loans to see'}
           isEmpty={!hasLoans} style={s.metricHalf} valueColor={debtFreeDate ? 'amber' : 'muted'} />
       </View>
+
+      {/* Health Trend Chart */}
+      {hasLoans && (
+        <HealthTrendChart snapshots={snapshots} />
+      )}
 
       {/* Active Loans or Empty State */}
       {!hasLoans ? (
@@ -224,6 +312,30 @@ export default function DashboardScreen() {
             </Typography>
           </TouchableOpacity>
         </Card>
+      )}
+
+      {/* Analytics Row */}
+      {hasLoans && (
+        <View style={s.analyticsRow}>
+          <Card style={s.affordabilityCard}>
+            <Typography variant="body" weight="bold" color="navy" fontFamily="heading" style={s.sectionTitle}>
+              Affordability
+            </Typography>
+            {affordability ? (
+              <AffordabilityGauge score={affordability.score} />
+            ) : (
+              <View style={s.emptyGauge}>
+                <Typography variant="xs" color="slate" style={{ textAlign: 'center' }}>
+                  Update profile to see score
+                </Typography>
+              </View>
+            )}
+          </Card>
+
+          <Card style={s.distributionCard}>
+            <DebtDistribution loans={distributionData} />
+          </Card>
+        </View>
       )}
 
       {/* AI Insight Card */}
@@ -324,4 +436,9 @@ const s = StyleSheet.create({
   },
   aiText: { lineHeight: 20, marginTop: 4 },
   aiAction: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: Spacing.md },
+  analyticsRow: { flexDirection: 'column', gap: Spacing.base },
+  affordabilityCard: { flex: 1 },
+  distributionCard: { flex: 1 },
+  sectionTitle: { marginBottom: Spacing.sm },
+  emptyGauge: { height: 90, alignItems: 'center', justifyContent: 'center', borderStyle: 'dashed', borderWidth: 1, borderColor: Colors.borderMid, borderRadius: Radius.lg },
 });

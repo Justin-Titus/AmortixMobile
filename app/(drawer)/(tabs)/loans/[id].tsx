@@ -1,9 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   View, ScrollView, TouchableOpacity, Alert, StyleSheet, RefreshControl,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { getLoan, deleteLoan, type LoanRecord } from '@/services/loans';
+import { getLoan, deleteLoan, getLoans, type LoanRecord } from '@/services/loans';
+import { getProfile, type FinancialProfile } from '@/services/profile';
+import { loanHealthScore, monthsSince } from '@/lib/calculations/analysis';
+import LoanHealthScoreBadge from '@/components/analysis/LoanHealthScoreBadge';
+import DefaultRiskCard from '@/components/ml/DefaultRiskCard';
+import PrepaymentSimulator from '@/components/analysis/PrepaymentSimulator';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import Typography from '@/components/ui/Typography';
@@ -16,13 +21,25 @@ export default function LoanDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const [loan, setLoan] = useState<LoanRecord | null>(null);
+  const [profile, setProfile] = useState<FinancialProfile | null>(null);
+  const [totalEMI, setTotalEMI] = useState(0);
+  const [loansCount, setLoansCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadData = async () => {
     if (id) {
-      const data = await getLoan(id);
-      setLoan(data);
+      const [loanData, profileData, allLoans] = await Promise.all([
+        getLoan(id),
+        getProfile(),
+        getLoans()
+      ]);
+      setLoan(loanData);
+      setProfile(profileData);
+      if (allLoans) {
+        setTotalEMI(allLoans.reduce((sum, l) => sum + l.emiAmount, 0));
+        setLoansCount(allLoans.length);
+      }
     }
     setLoading(false);
   };
@@ -30,6 +47,41 @@ export default function LoanDetailScreen() {
   useEffect(() => {
     loadData();
   }, [id]);
+
+  const healthScore = useMemo(() => {
+    if (!profile || !loan || !(profile.monthlyIncome > 0)) return null;
+    return loanHealthScore({
+      interestRate: loan.interestRate,
+      rateType: loan.rateType as any,
+      tenureMonths: loan.tenureMonths,
+      emiAmount: loan.emiAmount,
+      monthlyIncome: profile.monthlyIncome,
+      outstandingBalance: loan.outstandingBalance,
+      principal: loan.principal,
+    });
+  }, [loan, profile]);
+
+  const riskInput = useMemo(() => {
+    if (!profile || !loan || !(profile.monthlyIncome > 0)) return null;
+    return {
+      monthlyIncome: profile.monthlyIncome,
+      monthlyExpenses: profile.monthlyExpenses,
+      employmentType: profile.employmentType as any,
+      hasEmergencyFund: profile.hasEmergencyFund,
+      emergencyFundMonths: profile.emergencyFundMonths,
+      creditScoreRange: profile.creditScoreRange,
+      loanType: loan.loanType,
+      interestRate: loan.interestRate,
+      rateType: loan.rateType as any,
+      tenureMonths: loan.tenureMonths,
+      outstandingBalance: loan.outstandingBalance,
+      emiAmount: loan.emiAmount,
+      monthsActive: monthsSince(loan.startDate),
+      totalMonthlyEMI: totalEMI,
+      numberOfActiveLoans: loansCount,
+      debtToIncomeRatio: totalEMI / profile.monthlyIncome,
+    };
+  }, [loan, profile, totalEMI, loansCount]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -103,6 +155,11 @@ export default function LoanDetailScreen() {
                 {loan.lender}
               </Typography>
             )}
+            {healthScore !== null && (
+              <View style={{ marginTop: Spacing.sm }}>
+                <LoanHealthScoreBadge score={healthScore} />
+              </View>
+            )}
           </View>
         </View>
 
@@ -116,6 +173,17 @@ export default function LoanDetailScreen() {
           </View>
         </View>
       </Card>
+
+      {/* Default Risk Card */}
+      {riskInput && <DefaultRiskCard riskInput={riskInput} />}
+
+      {/* Prepayment Simulator */}
+      <PrepaymentSimulator
+        outstandingBalance={loan.outstandingBalance}
+        interestRate={loan.interestRate}
+        tenureMonths={loan.tenureMonths}
+        emiAmount={loan.emiAmount}
+      />
 
       {/* Record Payment */}
       <LogPaymentCard loanId={loan.id} defaultAmount={loan.emiAmount} onSuccess={loadData} />

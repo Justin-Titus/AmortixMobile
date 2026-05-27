@@ -48,7 +48,11 @@ export default function CustomDrawerContent(props: any) {
           router.push(item.href);
         }}
       >
-        {isActive && <View style={styles.activeIndicator} />}
+        {isActive && (
+          <View style={styles.indicatorContainer}>
+            <View style={styles.activeIndicator} />
+          </View>
+        )}
         <View style={[styles.iconBox, isActive ? styles.iconBoxActive : null]}>
           <item.icon size={18} color={isActive ? '#4de0b3' : '#94a3b8'} />
         </View>
@@ -173,13 +177,16 @@ const styles = StyleSheet.create({
   navItemActive: {
     backgroundColor: '#1E3A5F',
   },
-  activeIndicator: {
+  indicatorContainer: {
     position: 'absolute',
     left: 0,
-    top: '50%',
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+  },
+  activeIndicator: {
     width: 3,
     height: 20,
-    marginTop: -10,
     backgroundColor: '#10b981',
     borderTopRightRadius: 4,
     borderBottomRightRadius: 4,
