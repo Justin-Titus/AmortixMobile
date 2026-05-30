@@ -75,10 +75,7 @@ export default function EditProfileScreen() {
       style={{ flex: 1, backgroundColor: Colors.background }}
     >
       <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
-        <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
-          <ArrowLeft size={16} color={Colors.slate} />
-          <Typography weight="medium" color="slate">Back</Typography>
-        </TouchableOpacity>
+
 
         <View style={s.hero}>
           <Typography variant="h3" weight="bold" color="navy" fontFamily="heading">

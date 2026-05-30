@@ -48,7 +48,12 @@ export default function ChatScreen() {
     setLoading(true);
 
     try {
-      const appUrl = (typeof process !== 'undefined' ? (process.env as any).EXPO_PUBLIC_APP_URL : '') || 'http://localhost:3000';
+      // Default to production URL if env is not injected during APK build
+      let appUrl = process.env.EXPO_PUBLIC_APP_URL || 'https://amortix.vercel.app';
+      if (__DEV__ && Platform.OS === 'android' && appUrl.includes('localhost')) {
+        appUrl = appUrl.replace('localhost', '10.0.2.2');
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
 
       const res = await fetch(`${appUrl}/api/chat`, {
@@ -88,7 +93,16 @@ export default function ChatScreen() {
         }
       } else {
         const text = await res.text();
-        setMessages(prev => [...prev, { id: assistantId, role: 'assistant', content: text }]);
+        let parsedText = '';
+        const lines = text.split('\n');
+        for (const line of lines) {
+          if (line.startsWith('0:')) {
+            try {
+              parsedText += JSON.parse(line.substring(2));
+            } catch (e) {}
+          }
+        }
+        setMessages(prev => [...prev, { id: assistantId, role: 'assistant', content: parsedText || text }]);
       }
     } catch (err: any) {
       setMessages(prev => [...prev, {
@@ -119,9 +133,9 @@ export default function ChatScreen() {
   return (
     <View style={s.safe}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
         style={{ flex: 1 }}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 90}
       >
         {messages.length === 0 ? (
           <View style={s.emptyChat}>
