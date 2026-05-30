@@ -3,13 +3,14 @@ import { View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from '
 import { Colors, Spacing, Radius, Shadows } from '@/constants/theme';
 import { CalendarDays, ChevronLeft, ChevronRight, Info } from 'lucide-react-native';
 import { getLoansWithPayments } from '@/services/loans';
-import { buildCalendarData, formatDateKey, RawLoan } from '@/lib/calculations/calendar';
-import { formatCurrency } from '@/lib/calculations/emi';
+import { getProfile } from '@/services/profile';
+import { buildCalendarData, formatDateKey, RawLoan, formatCurrency, getCurrencyConfig } from '@/lib/calculations';
 import { EmptyState } from '@/components/ui/EmptyState';
 import Typography from '@/components/ui/Typography';
 
 export default function CalendarScreen() {
   const [loans, setLoans] = useState<any[]>([]);
+  const [currencyCode, setCurrencyCode] = useState('INR');
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -20,7 +21,10 @@ export default function CalendarScreen() {
   const month = currentMonth.getMonth();
 
   const loadData = useCallback(async () => {
-    const data = await getLoansWithPayments();
+    const [data, profile] = await Promise.all([getLoansWithPayments(), getProfile()]);
+    if (profile?.currency) {
+      setCurrencyCode(profile.currency);
+    }
     const transformed: RawLoan[] = data.map(l => ({
       id: l.id,
       name: l.name,
@@ -86,7 +90,7 @@ export default function CalendarScreen() {
         <View style={styles.heroStats}>
           <View style={styles.heroStat}>
             <Typography variant="lg" weight="bold" color="navy" fontFamily="heading">
-              {formatCurrency(totalDueIn30)}
+              {formatCurrency(totalDueIn30, currencyCode)}
             </Typography>
             <Typography variant="xs" color="slate">Due in 30 days</Typography>
           </View>
@@ -113,7 +117,7 @@ export default function CalendarScreen() {
       <View style={styles.calendarCard}>
         <View style={styles.calendarHeader}>
           <Typography variant="md" weight="medium" color="navy" fontFamily="heading">
-            {currentMonth.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
+            {currentMonth.toLocaleDateString(getCurrencyConfig(currencyCode).locale, { month: 'long', year: 'numeric' })}
           </Typography>
           <View style={styles.monthControls}>
             <TouchableOpacity onPress={() => changeMonth(-1)} style={styles.controlBtn}>
@@ -183,7 +187,7 @@ export default function CalendarScreen() {
                 </View>
                 {entry && (
                   <Typography variant="xs" weight="medium" color="slate" align="center" style={styles.cellAmount} numberOfLines={1}>
-                    ₹{entry.totalDue > 1000 ? `${Math.round(entry.totalDue / 1000)}k` : entry.totalDue}
+                    {formatCurrency(entry.totalDue, currencyCode, { compact: true })}
                   </Typography>
                 )}
               </TouchableOpacity>
@@ -196,7 +200,7 @@ export default function CalendarScreen() {
         <View style={styles.detailsHeader}>
           <Typography variant="md" weight="medium" color="navy" fontFamily="heading">
             {selectedDay 
-              ? new Date(selectedDay.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+              ? new Date(selectedDay.date).toLocaleDateString(getCurrencyConfig(currencyCode).locale, { day: 'numeric', month: 'short', year: 'numeric' })
               : 'Upcoming payments'}
           </Typography>
         </View>
@@ -207,13 +211,13 @@ export default function CalendarScreen() {
               <View key={l.loanId} style={styles.dueItem}>
                 <View style={styles.dueMain}>
                   <Typography weight="medium" color="navy" fontFamily="heading">{l.loanName}</Typography>
-                  <Typography weight="bold" color="navy" fontFamily="heading">{formatCurrency(l.emiAmount)}</Typography>
+                  <Typography weight="bold" color="navy" fontFamily="heading">{formatCurrency(l.emiAmount, currencyCode)}</Typography>
                 </View>
                 <View style={styles.dueStatus}>
                   <Typography variant="xs" weight="bold" color={l.status === 'paid' ? 'emerald' : l.status === 'overdue' ? 'red' : 'amber'}>
                     {l.status.toUpperCase()}
                   </Typography>
-                  <Typography variant="xs" color="slate">Paid {formatCurrency(l.paidAmount)}</Typography>
+                  <Typography variant="xs" color="slate">Paid {formatCurrency(l.paidAmount, currencyCode)}</Typography>
                 </View>
               </View>
             ))}
@@ -230,10 +234,10 @@ export default function CalendarScreen() {
                   <View style={styles.dueMain}>
                     <Typography weight="medium" color="navy" fontFamily="heading">{item.loanName}</Typography>
                     <Typography variant="caption" color="slate">
-                      {item.dueDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                      {item.dueDate.toLocaleDateString(getCurrencyConfig(currencyCode).locale, { day: 'numeric', month: 'short' })}
                     </Typography>
                   </View>
-                  <Typography weight="bold" color="navy" fontFamily="heading">{formatCurrency(item.amount)}</Typography>
+                  <Typography weight="bold" color="navy" fontFamily="heading">{formatCurrency(item.amount, currencyCode)}</Typography>
                 </View>
               ))
             )}
@@ -312,3 +316,4 @@ const styles = StyleSheet.create({
   dueStatus: { alignItems: 'flex-end', gap: 2 },
   emptyListText: { marginTop: Spacing.xl },
 });
+

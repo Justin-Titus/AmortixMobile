@@ -11,8 +11,6 @@ Notifications.setNotificationHandler({
     shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
   }),
 });
 
@@ -48,6 +46,11 @@ export function usePushNotifications() {
     try {
       // Get the Expo Push Token using Project ID from config
       const projectId = Constants.expoConfig?.extra?.eas?.projectId || Constants.easConfig?.projectId;
+      if (!projectId) {
+        console.warn('EAS Project ID not found. Push notifications token registration skipped.');
+        return;
+      }
+
       const token = (
         await Notifications.getExpoPushTokenAsync({
           projectId,

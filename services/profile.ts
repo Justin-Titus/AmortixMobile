@@ -19,6 +19,7 @@ export type FinancialProfile = {
   hasEmergencyFund: boolean;
   emergencyFundMonths: number;
   affordabilityScore: number | null;
+  currency: string;
 };
 
 export type HealthSnapshot = {
@@ -54,6 +55,7 @@ export async function updateProfile(input: {
   employmentType?: string;
   hasEmergencyFund?: boolean;
   emergencyFundMonths?: number;
+  currency?: string;
 }) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: 'Unauthorized' };
@@ -69,6 +71,7 @@ export async function updateProfile(input: {
       employmentType: input.employmentType ?? 'SALARIED',
       hasEmergencyFund: input.hasEmergencyFund ?? false,
       emergencyFundMonths: input.emergencyFundMonths ?? 0,
+      currency: input.currency ?? 'INR',
       updatedAt: new Date().toISOString(),
     }, { onConflict: 'userId' });
 

@@ -4,13 +4,14 @@ import { Calculator } from 'lucide-react-native';
 import { Colors, Spacing, Radius, Shadows } from '@/constants/theme';
 import Typography from '../ui/Typography';
 import SliderField from '../ui/SliderField';
-import { formatCurrency } from '@/lib/calculations/emi';
+import { formatCurrency } from '@/lib/calculations';
 
 type ExtraPaymentSimulatorProps = {
   extraPayment: number;
   oneTimePayment: number;
   onExtraPaymentChange: (val: number) => void;
   onOneTimePaymentChange: (val: number) => void;
+  currencyCode?: string;
 };
 
 export default function ExtraPaymentSimulator({
@@ -18,6 +19,7 @@ export default function ExtraPaymentSimulator({
   oneTimePayment,
   onExtraPaymentChange,
   onOneTimePaymentChange,
+  currencyCode = 'INR',
 }: ExtraPaymentSimulatorProps) {
   return (
     <View style={styles.container}>
@@ -37,7 +39,7 @@ export default function ExtraPaymentSimulator({
         min={0}
         max={100000}
         step={1000}
-        displayValue={formatCurrency(extraPayment)}
+        displayValue={formatCurrency(extraPayment, currencyCode)}
         onChange={onExtraPaymentChange}
       />
 
@@ -47,7 +49,7 @@ export default function ExtraPaymentSimulator({
         min={0}
         max={1000000}
         step={10000}
-        displayValue={formatCurrency(oneTimePayment)}
+        displayValue={formatCurrency(oneTimePayment, currencyCode)}
         onChange={onOneTimePaymentChange}
       />
     </View>
@@ -74,3 +76,4 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
   },
 });
+

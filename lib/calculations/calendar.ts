@@ -31,9 +31,8 @@ export function formatDateKey(date: Date) {
 }
 
 export function parseDateKey(s: string) {
-  // Handle ISO strings or YYYY-MM-DD
-  const dateStr = s.includes('T') ? s.split('T')[0] : s;
-  const [y, m, d] = dateStr.split("-").map(Number);
+  // expect YYYY-MM-DD
+  const [y, m, d] = s.split("-").map(Number);
   return new Date(y, m - 1, d);
 }
 
@@ -63,6 +62,7 @@ function addDays(date: Date, amount: number) {
 }
 
 function parseAnchor(loan: RawLoan) {
+  // anchor is nextEmiDate or startDate
   const anchorStr = loan.nextEmiDate ?? loan.startDate;
   return parseDateKey(anchorStr);
 }
@@ -87,6 +87,7 @@ export function buildCalendarData(loans: RawLoan[], currentMonth: Date, today: D
   const currentYear = currentMonth.getFullYear();
   const currentMonthIndex = currentMonth.getMonth();
 
+  // helper to ensure key exists
   function ensureDay(dateKey: string) {
     if (!days[dateKey]) {
       days[dateKey] = { date: dateKey, totalDue: 0, totalPaid: 0, loans: [] };
@@ -94,11 +95,14 @@ export function buildCalendarData(loans: RawLoan[], currentMonth: Date, today: D
     return days[dateKey];
   }
 
+  // build per-month dues
   for (const loan of loans) {
     const dueDate = getLoanDueDateForMonth(loan, currentMonth);
     if (!dueDate) continue;
     const dateKey = formatDateKey(dueDate);
 
+    // Sum monthly EMI payments for the loan instead of exact due-date matching.
+    // Users can pay before/after due day; we still want paid amount to appear for that month's EMI.
     const paidAmount = loan.payments
       .filter((p) => {
         if (p.type !== "EMI") return false;
@@ -119,6 +123,7 @@ export function buildCalendarData(loans: RawLoan[], currentMonth: Date, today: D
     day.totalPaid += paidAmount;
   }
 
+  // Also collect due-in-30-days list
   const dueIn30: { loanId: string; loanName: string; amount: number; dueDate: Date }[] = [];
   const endDate = addDays(today, 30);
   for (const loan of loans) {

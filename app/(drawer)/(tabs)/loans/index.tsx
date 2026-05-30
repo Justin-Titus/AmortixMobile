@@ -1,35 +1,57 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useCallback } from 'react';
 import {
   View, ScrollView, TouchableOpacity, RefreshControl, StyleSheet,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { getLoans, type LoanRecord } from '@/services/loans';
+import { getProfile } from '@/services/profile';
 import { MetricCard } from '@/components/ui/MetricCard';
 import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
 import Typography from '@/components/ui/Typography';
 import { Colors, Spacing, Radius, Shadows } from '@/constants/theme';
-import { formatCurrency } from '@/lib/calculations/emi';
+import { useOfflineData } from '@/hooks/useOfflineData';
+import {
+  saveOfflineLoans, getOfflineLoans,
+  saveOfflineProfile, getOfflineProfile,
+} from '@/lib/offline/cache';
+import OfflineBanner from '@/components/ui/OfflineBanner';
+import { formatCurrency } from '@/lib/calculations';
 import { Info, Plus, ExternalLink } from 'lucide-react-native';
 
 export default function LoansScreen() {
   const router = useRouter();
-  const [loans, setLoans] = useState<LoanRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
 
-  const load = useCallback(async () => {
-    const data = await getLoans();
-    setLoans(data);
+  const fetcher = useCallback(async () => {
+    const [loansData, profileData] = await Promise.all([getLoans(), getProfile()]);
+    return { loans: loansData, profile: profileData };
   }, []);
+
+  const cacher = useCallback(async (data: { loans: LoanRecord[], profile: any }) => {
+    await saveOfflineLoans(data.loans);
+    if (data.profile) await saveOfflineProfile(data.profile);
+  }, []);
+
+  const reader = useCallback(async () => {
+    const loans = await getOfflineLoans();
+    const profile = await getOfflineProfile();
+    return { loans, profile };
+  }, []);
+
+  const { data, loading, refreshing, isOffline, lastSync, refresh } = useOfflineData({
+    fetcher,
+    cacher,
+    reader
+  });
 
   useFocusEffect(
     useCallback(() => {
-      load().finally(() => setLoading(false));
-    }, [load])
+      refresh();
+    }, [refresh])
   );
 
-  const onRefresh = async () => { setRefreshing(true); await load(); setRefreshing(false); };
+  const loans = data?.loans ?? [];
+  const currencyCode = data?.profile?.currency ?? 'INR';
 
   const totalOutstanding = loans.reduce((s, l) => s + l.outstandingBalance, 0);
   const totalEMI = loans.reduce((s, l) => s + l.emiAmount, 0);
@@ -50,9 +72,12 @@ export default function LoansScreen() {
     <ScrollView 
       style={s.container}
       contentContainerStyle={s.content}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.emerald} />}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={Colors.emerald} />}
       showsVerticalScrollIndicator={false}
     >
+      {/* Offline Alert Banner */}
+      {isOffline && <OfflineBanner lastSync={lastSync} />}
+
       {/* Hero */}
       <View style={s.hero}>
         <View style={s.heroRow}>
@@ -71,7 +96,11 @@ export default function LoansScreen() {
             </Typography>
           </View>
         </View>
-        <TouchableOpacity style={s.addBtn} onPress={() => router.push('/(drawer)/(tabs)/loans/add')}>
+        <TouchableOpacity 
+          style={[s.addBtn, { opacity: isOffline ? 0.6 : 1 }]} 
+          onPress={() => !isOffline && router.push('/(drawer)/(tabs)/loans/add')}
+          disabled={isOffline}
+        >
           <Plus size={14} color={Colors.white} />
           <Typography variant="body" weight="semiBold" color="white">Add loan</Typography>
         </TouchableOpacity>
@@ -80,8 +109,8 @@ export default function LoansScreen() {
       {/* Metrics */}
       <View style={s.metricsGrid}>
         <MetricCard label="Active loans" value={loans.length} isEmpty={!loans.length} style={s.metricHalf} />
-        <MetricCard label="Outstanding" value={formatCurrency(totalOutstanding)} isEmpty={!loans.length} style={s.metricHalf} />
-        <MetricCard label="Monthly EMI" value={formatCurrency(totalEMI)} isEmpty={!loans.length} style={s.metricHalf} />
+        <MetricCard label="Outstanding" value={formatCurrency(totalOutstanding, currencyCode)} isEmpty={!loans.length} style={s.metricHalf} />
+        <MetricCard label="Monthly EMI" value={formatCurrency(totalEMI, currencyCode)} isEmpty={!loans.length} style={s.metricHalf} />
         <MetricCard label="Avg rate" value={`${avgRate.toFixed(2)}%`} isEmpty={!loans.length} style={s.metricHalf} />
       </View>
 
@@ -107,13 +136,14 @@ export default function LoansScreen() {
           <EmptyState icon={<Info size={20} color={Colors.slate} />}
             title="No loans tracked yet"
             description="Add your first loan to start comparing repayment strategies."
-            action={{ label: 'Add your first loan', href: '/(drawer)/(tabs)/loans/add' }} />
+            action={isOffline ? undefined : { label: 'Add your first loan', href: '/(drawer)/(tabs)/loans/add' }} />
         </Card>
       ) : (
         <View style={s.loanGrid}>
           {loans.map((loan, i) => {
             const color = loanColors[i % 6];
             const pct = Math.round((1 - loan.outstandingBalance / Math.max(loan.principal, 1)) * 100);
+            const loanCurrency = loan.currency || currencyCode;
             return (
               <TouchableOpacity key={loan.id} style={s.loanCard}
                 onPress={() => router.push({ pathname: '/(drawer)/(tabs)/loans/[id]', params: { id: loan.id } })}>
@@ -132,12 +162,12 @@ export default function LoansScreen() {
                   </View>
                   <View style={s.loanArrow}><ExternalLink size={14} color={Colors.slate} /></View>
                 </View>
-                <View style={s.progressBg}><View style={[s.progressFill, { width: `${Math.max(0, Math.min(100, pct))}%` }]} /></View>
+                <View style={s.progressBg}><View style={[s.progressFill, { width: `${Math.max(0, Math.min(100, pct))}%`, backgroundColor: color }]} /></View>
                 <View style={s.loanStats}>
                   <View>
                     <Typography variant="sm" color="slateLight">Outstanding</Typography>
                     <Typography variant="md" weight="medium" color="navy" style={s.loanStatValue}>
-                      {formatCurrency(loan.outstandingBalance)}
+                      {formatCurrency(loan.outstandingBalance, loanCurrency)}
                     </Typography>
                   </View>
                   <View>
@@ -149,7 +179,7 @@ export default function LoansScreen() {
                   <View>
                     <Typography variant="sm" color="slateLight">EMI</Typography>
                     <Typography variant="md" weight="medium" color="navy" style={s.loanStatValue}>
-                      {formatCurrency(loan.emiAmount)}
+                      {formatCurrency(loan.emiAmount, loanCurrency)}
                     </Typography>
                   </View>
                 </View>
@@ -206,3 +236,4 @@ const s = StyleSheet.create({
   loanStats: { flexDirection: 'row', gap: Spacing.lg },
   loanStatValue: { marginTop: 4 },
 });
+

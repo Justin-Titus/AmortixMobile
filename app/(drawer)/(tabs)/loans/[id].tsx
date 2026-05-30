@@ -5,7 +5,7 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { getLoan, deleteLoan, getLoans, type LoanRecord } from '@/services/loans';
 import { getProfile, type FinancialProfile } from '@/services/profile';
-import { loanHealthScore, monthsSince } from '@/lib/calculations/analysis';
+import { loanHealthScore, monthsSince, formatCurrency, getCurrencyConfig } from '@/lib/calculations';
 import LoanHealthScoreBadge from '@/components/analysis/LoanHealthScoreBadge';
 import DefaultRiskCard from '@/components/ml/DefaultRiskCard';
 import PrepaymentSimulator from '@/components/analysis/PrepaymentSimulator';
@@ -13,7 +13,6 @@ import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import Typography from '@/components/ui/Typography';
 import { Colors, Spacing, Radius, Shadows } from '@/constants/theme';
-import { formatCurrency } from '@/lib/calculations/emi';
 import { Trash2, Edit3 } from 'lucide-react-native';
 import { LogPaymentCard } from '@/components/loans/LogPaymentCard';
 
@@ -121,6 +120,8 @@ export default function LoanDetailScreen() {
   }
 
   const paidPct = Math.round(((loan.principal - loan.outstandingBalance) / Math.max(loan.principal, 1)) * 100);
+  const loanCurrency = loan.currency || 'INR';
+  const currencyConfig = getCurrencyConfig(loanCurrency);
 
   return (
     <ScrollView 
@@ -166,7 +167,7 @@ export default function LoanDetailScreen() {
         <View style={s.progressSection}>
           <View style={s.progressRow}>
             <Typography variant="caption" weight="medium" color="slate">{paidPct}% paid</Typography>
-            <Typography variant="caption" weight="medium" color="slate">{formatCurrency(loan.outstandingBalance)} left</Typography>
+            <Typography variant="caption" weight="medium" color="slate">{formatCurrency(loan.outstandingBalance, loanCurrency)} left</Typography>
           </View>
           <View style={s.progressBg}>
             <View style={[s.progressFill, { width: `${Math.max(0, Math.min(100, paidPct))}%` }]} />
@@ -175,7 +176,7 @@ export default function LoanDetailScreen() {
       </Card>
 
       {/* Default Risk Card */}
-      {riskInput && <DefaultRiskCard riskInput={riskInput} />}
+      {riskInput && <DefaultRiskCard riskInput={riskInput} currencyCode={loanCurrency} />}
 
       {/* Prepayment Simulator */}
       <PrepaymentSimulator
@@ -183,10 +184,11 @@ export default function LoanDetailScreen() {
         interestRate={loan.interestRate}
         tenureMonths={loan.tenureMonths}
         emiAmount={loan.emiAmount}
+        currencyCode={loanCurrency}
       />
 
       {/* Record Payment */}
-      <LogPaymentCard loanId={loan.id} defaultAmount={loan.emiAmount} onSuccess={loadData} />
+      <LogPaymentCard loanId={loan.id} defaultAmount={loan.emiAmount} onSuccess={loadData} currencyCode={loanCurrency} />
 
       {/* Payment History */}
       <Card>
@@ -202,12 +204,12 @@ export default function LoanDetailScreen() {
             <View key={p.id} style={s.historyRow}>
               <View>
                 <Typography variant="body" weight="medium" color="navy">
-                  {new Date(p.paymentDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                  {new Date(p.paymentDate).toLocaleDateString(currencyConfig.locale, { day: 'numeric', month: 'short' })}
                 </Typography>
                 <Typography variant="xs" color="slate">{p.type}</Typography>
               </View>
               <Typography variant="body" weight="bold" color="emerald">
-                {formatCurrency(p.amount)}
+                {formatCurrency(p.amount, loanCurrency)}
               </Typography>
             </View>
           ))
@@ -219,12 +221,12 @@ export default function LoanDetailScreen() {
           Loan details
         </Typography>
         {[
-          ['Principal', formatCurrency(loan.principal)],
-          ['Outstanding', formatCurrency(loan.outstandingBalance)],
+          ['Principal', formatCurrency(loan.principal, loanCurrency)],
+          ['Outstanding', formatCurrency(loan.outstandingBalance, loanCurrency)],
           ['Interest rate', `${loan.interestRate}% (${loan.rateType})`],
           ['Tenure', `${loan.tenureMonths} months`],
-          ['Monthly EMI', formatCurrency(loan.emiAmount)],
-          ['Start date', new Date(loan.startDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })],
+          ['Monthly EMI', formatCurrency(loan.emiAmount, loanCurrency)],
+          ['Start date', new Date(loan.startDate).toLocaleDateString(currencyConfig.locale, { day: 'numeric', month: 'short', year: 'numeric' })],
         ].map(([label, value]) => (
           <View key={label} style={s.detailRow}>
             <Typography variant="body" color="slate">{label}</Typography>

@@ -1,32 +1,58 @@
 /**
- * EMI calculation and currency formatting utilities
- * Ported from web app lib/calculations/emi.ts
+ * EMI Calculation Engine
+ * Standard reducing balance EMI formula
  */
 
-export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
+import { formatCurrency, formatINR, formatNumber } from "./currency";
 
-export function formatCompactCurrency(amount: number): string {
-  if (amount === 0) return '₹0';
-  if (amount >= 10000000) return `₹${(amount / 10000000).toFixed(1)}Cr`;
-  if (amount >= 100000) return `₹${Math.round(amount / 100000)}L`;
-  if (amount >= 1000) return `₹${Math.round(amount / 1000)}K`;
-  return `₹${amount.toLocaleString('en-IN')}`;
-}
+// Re-export currency helpers for backward compatibility
+export { formatCurrency, formatINR, formatNumber };
 
-export function calculateEMI(principal: number, annualRate: number, tenureMonths: number): number {
-  if (annualRate === 0) return principal / tenureMonths;
-  const monthlyRate = annualRate / 12 / 100;
-  const emi = (principal * monthlyRate * Math.pow(1 + monthlyRate, tenureMonths)) /
-    (Math.pow(1 + monthlyRate, tenureMonths) - 1);
+/** Calculate monthly EMI using the standard reducing balance formula */
+export function calculateEMI(
+  principal: number,
+  annualRate: number,
+  tenureMonths: number
+): number {
+  if (
+    principal <= 0 ||
+    tenureMonths <= 0 ||
+    annualRate < 0 ||
+    !Number.isFinite(principal) ||
+    !Number.isFinite(tenureMonths) ||
+    !Number.isFinite(annualRate)
+  ) {
+    throw new Error(
+      "Invalid input: principal must be >0, tenureMonths must be >0, annualRate must be >=0"
+    );
+  }
+
+  const r = annualRate / 12 / 100;
+  const n = tenureMonths;
+
+  if (annualRate === 0) {
+    return Math.round(principal / tenureMonths);
+  }
+
+  const emi = (principal * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
   return Math.round(emi);
 }
 
+/** Calculate total interest paid over the loan tenure */
+export function totalInterest(
+  emi: number,
+  tenureMonths: number,
+  principal: number
+): number {
+  return emi * tenureMonths - principal;
+}
+
+/** Calculate total amount paid (principal + interest) */
+export function totalAmount(emi: number, tenureMonths: number): number {
+  return emi * tenureMonths;
+}
+
+/** Backward-compatible function name from mobile */
 export function calculateTotalInterest(
   principal: number,
   emiAmount: number,
@@ -35,7 +61,12 @@ export function calculateTotalInterest(
   return emiAmount * tenureMonths - principal;
 }
 
-export function calculateTenure(principal: number, annualRate: number, emiAmount: number): number {
+/** Calculate remaining tenure given principal, rate and desired EMI */
+export function calculateTenure(
+  principal: number,
+  annualRate: number,
+  emiAmount: number
+): number {
   if (annualRate === 0) return Math.round(principal / emiAmount);
   const monthlyRate = annualRate / 12 / 100;
   
@@ -46,3 +77,7 @@ export function calculateTenure(principal: number, annualRate: number, emiAmount
   return Math.round(tenure);
 }
 
+/** Backward-compatible function from mobile */
+export function formatCompactCurrency(amount: number, currencyCode: string = "INR"): string {
+  return formatCurrency(amount, currencyCode, { compact: true });
+}

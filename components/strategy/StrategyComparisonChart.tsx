@@ -3,7 +3,7 @@ import { View, StyleSheet, Dimensions } from 'react-native';
 import Svg, { Rect, Text as SvgText } from 'react-native-svg';
 import { Colors, Spacing } from '@/constants/theme';
 import Typography from '../ui/Typography';
-import { formatCurrency } from '@/lib/calculations/emi';
+import { formatCurrency } from '@/lib/calculations';
 
 type StrategyComparisonChartProps = {
   data: {
@@ -12,12 +12,13 @@ type StrategyComparisonChartProps = {
     color: string;
   }[];
   activeStrategy: string;
+  currencyCode?: string;
 };
 
 const CHART_HEIGHT = 200;
 const CHART_WIDTH = Dimensions.get('window').width - Spacing.base * 4 - 32;
 
-export default function StrategyComparisonChart({ data, activeStrategy }: StrategyComparisonChartProps) {
+export default function StrategyComparisonChart({ data, activeStrategy, currencyCode = 'INR' }: StrategyComparisonChartProps) {
   const maxInterest = Math.max(...data.map(d => d.interest), 1);
   const barHeight = 24;
   const gap = 30;
@@ -72,7 +73,7 @@ export default function StrategyComparisonChart({ data, activeStrategy }: Strate
                   fontWeight="bold"
                   fill={Colors.navy}
                 >
-                  {formatCurrency(item.interest)}
+                  {formatCurrency(item.interest, currencyCode)}
                 </SvgText>
               </React.Fragment>
             );
@@ -97,3 +98,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 });
+

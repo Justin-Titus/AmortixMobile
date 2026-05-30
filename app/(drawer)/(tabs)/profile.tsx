@@ -9,10 +9,10 @@ import { getProfile, getUserData, type FinancialProfile } from '@/services/profi
 import { Card } from '@/components/ui/Card';
 import Typography from '@/components/ui/Typography';
 import { Colors, Spacing, Radius } from '@/constants/theme';
-import { formatCurrency } from '@/lib/calculations/emi';
+import { formatCurrency } from '@/lib/calculations';
 import {
   Mail, Briefcase, Shield, PiggyBank, LogOut, ChevronRight,
-  LifeBuoy, FileText, Lock, HelpCircle,
+  LifeBuoy, FileText, Lock, HelpCircle, Coins,
 } from 'lucide-react-native';
 
 export default function ProfileScreen() {
@@ -78,8 +78,9 @@ export default function ProfileScreen() {
           <>
             {[
               { icon: <Briefcase size={16} color={Colors.slate} />, label: 'Employment', value: profile.employmentType },
-              { icon: <Mail size={16} color={Colors.slate} />, label: 'Monthly income', value: formatCurrency(profile.monthlyIncome) },
-              { icon: <Mail size={16} color={Colors.slate} />, label: 'Monthly expenses', value: formatCurrency(profile.monthlyExpenses) },
+              { icon: <Coins size={16} color={Colors.slate} />, label: 'Default currency', value: profile.currency || 'INR' },
+              { icon: <Mail size={16} color={Colors.slate} />, label: 'Monthly income', value: formatCurrency(profile.monthlyIncome, profile.currency) },
+              { icon: <Mail size={16} color={Colors.slate} />, label: 'Monthly expenses', value: formatCurrency(profile.monthlyExpenses, profile.currency) },
               { icon: <Shield size={16} color={Colors.slate} />, label: 'Credit score', value: profile.creditScoreRange },
               { icon: <PiggyBank size={16} color={Colors.slate} />, label: 'Emergency fund', value: profile.hasEmergencyFund ? `${profile.emergencyFundMonths} months` : 'Not set up' },
             ].map(item => (
@@ -200,3 +201,4 @@ const s = StyleSheet.create({
     marginTop: Spacing.sm,
   },
 });
+

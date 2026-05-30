@@ -22,7 +22,7 @@
         "foregroundImage": "./assets/Amortix.png",
         "backgroundColor": "#0d1b2f"
       },
-      "edgeToEdgeEnabled": true,
+
       "package": "com.amortix.app"
     },
     "web": {
@@ -35,6 +35,11 @@
       "expo-secure-store",
       "@react-native-community/datetimepicker",
       "expo-notifications"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "f249ad5b-630e-4bcc-8c46-f0124eca32da"
+      }
+    }
   }
 }

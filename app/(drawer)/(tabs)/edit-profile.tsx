@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/Input';
 import { Colors, Radius, Spacing, Shadows } from '@/constants/theme';
 import { Save, ArrowLeft } from 'lucide-react-native';
 import Typography from '@/components/ui/Typography';
+import { CURRENCIES, getCurrencyConfig } from '@/lib/calculations';
 
 const employmentTypes = ['SALARIED', 'SELF_EMPLOYED', 'BUSINESS_OWNER', 'STUDENT', 'OTHER'];
 const creditScoreRanges = ['800+', '750-800', '700-750', '650-700', 'Below-650'];
@@ -24,6 +25,7 @@ export default function EditProfileScreen() {
   const [creditScore, setCreditScore] = useState('750-800');
   const [hasEmergencyFund, setHasEmergencyFund] = useState(false);
   const [emergencyMonths, setEmergencyMonths] = useState('');
+  const [currency, setCurrency] = useState('INR');
 
   useEffect(() => {
     getProfile().then(p => {
@@ -34,6 +36,7 @@ export default function EditProfileScreen() {
         setCreditScore(p.creditScoreRange);
         setHasEmergencyFund(p.hasEmergencyFund);
         setEmergencyMonths(String(p.emergencyFundMonths));
+        setCurrency(p.currency || 'INR');
       }
       setLoading(false);
     });
@@ -51,6 +54,7 @@ export default function EditProfileScreen() {
       creditScoreRange: creditScore,
       hasEmergencyFund,
       emergencyFundMonths: Number(emergencyMonths) || 0,
+      currency,
     });
 
     if (result.success) {
@@ -86,7 +90,7 @@ export default function EditProfileScreen() {
         </View>
 
         <Input 
-          label="MONTHLY INCOME (₹)" 
+          label={`MONTHLY INCOME (${getCurrencyConfig(currency).symbol})`} 
           placeholder="e.g. 100000" 
           value={income} 
           onChangeText={setIncome} 
@@ -95,13 +99,30 @@ export default function EditProfileScreen() {
         />
 
         <Input 
-          label="MONTHLY EXPENSES (₹)" 
+          label={`MONTHLY EXPENSES (${getCurrencyConfig(currency).symbol})`} 
           placeholder="e.g. 40000" 
           value={expenses} 
           onChangeText={setExpenses} 
           keyboardType="numeric" 
           containerStyle={s.gap} 
         />
+
+        <Typography variant="xs" weight="bold" color="navy" fontFamily="heading" style={s.label}>
+          DEFAULT CURRENCY
+        </Typography>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.chipScroll}>
+          {Object.keys(CURRENCIES).map(code => (
+            <TouchableOpacity 
+              key={code} 
+              style={[s.chip, currency === code && s.chipActive]} 
+              onPress={() => setCurrency(code)}
+            >
+              <Typography variant="xs" weight="bold" color={currency === code ? 'white' : 'slate'}>
+                {code} ({CURRENCIES[code].symbol})
+              </Typography>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
 
         <Typography variant="xs" weight="bold" color="navy" fontFamily="heading" style={s.label}>
           EMPLOYMENT TYPE
@@ -205,3 +226,4 @@ const s = StyleSheet.create({
   },
   disabled: { opacity: 0.5 },
 });
+

@@ -5,11 +5,12 @@ import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import Typography from '@/components/ui/Typography';
 import { Colors, Radius, Spacing, Shadows } from '@/constants/theme';
-import { formatCurrency } from '@/lib/calculations/emi';
 import { 
+  formatCurrency, 
+  getCurrencyConfig,
   generateAmortizationSchedule, 
   getScheduleSummary 
-} from '@/lib/calculations/amortization';
+} from '@/lib/calculations';
 
 function estimateRemainingMonths(outstanding: number, annualRate: number, emi: number, fallback: number): number {
   if (outstanding <= 0 || emi <= 0) return Math.max(1, fallback);
@@ -32,6 +33,7 @@ type PrepaymentSimulatorProps = {
   interestRate: number;
   tenureMonths: number;
   emiAmount: number;
+  currencyCode?: string;
 };
 
 export default function PrepaymentSimulator({
@@ -39,6 +41,7 @@ export default function PrepaymentSimulator({
   interestRate,
   tenureMonths,
   emiAmount,
+  currencyCode = 'INR',
 }: PrepaymentSimulatorProps) {
   const [tab, setTab] = useState<TabKey>('lump');
   const [lumpSum, setLumpSum] = useState('10000');
@@ -211,13 +214,13 @@ export default function PrepaymentSimulator({
         <View style={styles.metricCard}>
           <Typography variant="xs" color="slate">Interest saved</Typography>
           <Typography variant="lg" weight="bold" color="emerald" style={styles.metricVal}>
-            {formatCurrency(interestSaved)}
+            {formatCurrency(interestSaved, currencyCode)}
           </Typography>
         </View>
         <View style={styles.metricCard}>
           <Typography variant="xs" color="slate">New payoff</Typography>
           <Typography variant="sm" weight="bold" color="navy" style={styles.metricVal}>
-            {payoffDate.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}
+            {payoffDate.toLocaleDateString(getCurrencyConfig(currencyCode).locale, { month: 'short', year: 'numeric' })}
           </Typography>
         </View>
         <View style={styles.metricCard}>
@@ -262,7 +265,7 @@ export default function PrepaymentSimulator({
       {/* Financial Comparison Tip */}
       <View style={styles.advContainer}>
         <Typography variant="xs" color="slate" style={styles.advText}>
-          If you invested {formatCurrency(scenarioCapital)} in a fixed deposit at 7%, you'd earn {formatCurrency(fdInterestEarned)} in interest. Prepaying saves {formatCurrency(interestSaved)} in interest, giving you a net advantage of {formatCurrency(netAdvantage)}.
+          If you invested {formatCurrency(scenarioCapital, currencyCode)} in a fixed deposit at 7%, you'd earn {formatCurrency(fdInterestEarned, currencyCode)} in interest. Prepaying saves {formatCurrency(interestSaved, currencyCode)} in interest, giving you a net advantage of {formatCurrency(netAdvantage, currencyCode)}.
         </Typography>
       </View>
     </Card>
@@ -337,3 +340,4 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
 });
+

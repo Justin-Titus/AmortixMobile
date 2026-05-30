@@ -10,14 +10,16 @@ import Typography from '@/components/ui/Typography';
 import { Colors, Spacing, Radius } from '@/constants/theme';
 import { recordPayment } from '@/services/loans';
 import { CheckCircle2, Calendar as CalendarIcon } from 'lucide-react-native';
+import { getCurrencyConfig } from '@/lib/calculations';
 
 type LogPaymentCardProps = {
   loanId: string;
   defaultAmount: number;
   onSuccess: () => void;
+  currencyCode?: string;
 };
 
-export function LogPaymentCard({ loanId, defaultAmount, onSuccess }: LogPaymentCardProps) {
+export function LogPaymentCard({ loanId, defaultAmount, onSuccess, currencyCode = 'INR' }: LogPaymentCardProps) {
   const [amount, setAmount] = useState(String(defaultAmount));
   const [date, setDate] = useState(new Date());
   const [showPicker, setShowPicker] = useState(false);
@@ -26,6 +28,8 @@ export function LogPaymentCard({ loanId, defaultAmount, onSuccess }: LogPaymentC
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const currentConfig = getCurrencyConfig(currencyCode);
 
   const onDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
     setShowPicker(Platform.OS === 'ios');
@@ -109,7 +113,7 @@ export function LogPaymentCard({ loanId, defaultAmount, onSuccess }: LogPaymentC
 
       <View style={s.formRow}>
         <Input
-          label="AMOUNT (₹)"
+          label={`AMOUNT (${currentConfig.symbol})`}
           value={amount}
           onChangeText={setAmount}
           keyboardType="numeric"
@@ -121,7 +125,7 @@ export function LogPaymentCard({ loanId, defaultAmount, onSuccess }: LogPaymentC
           </Typography>
           <TouchableOpacity style={s.datePickerBtn} onPress={() => setShowPicker(true)}>
             <Typography variant="body" color="navy">
-              {date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+              {date.toLocaleDateString(currentConfig.locale, { day: 'numeric', month: 'short' })}
             </Typography>
             <CalendarIcon size={14} color={Colors.slate} />
           </TouchableOpacity>
@@ -184,3 +188,4 @@ const s = StyleSheet.create({
   successCard: { alignItems: 'center', paddingVertical: Spacing.xl },
   successTitle: { marginTop: Spacing.md, marginBottom: 4 },
 });
+

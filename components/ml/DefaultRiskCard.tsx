@@ -7,7 +7,7 @@ import {
   predictDefaultRisk, 
   type DefaultRiskInput, 
   type DefaultRiskResult 
-} from '@/lib/calculations/analysis';
+} from '@/lib/calculations';
 import { ChevronDown, ChevronUp, AlertCircle, CheckCircle2 } from 'lucide-react-native';
 
 function riskColor(result: DefaultRiskResult): string {
@@ -23,9 +23,9 @@ function riskBg(result: DefaultRiskResult): string {
   return Colors.redBg;
 }
 
-export default function DefaultRiskCard({ riskInput }: { riskInput: DefaultRiskInput }) {
+export default function DefaultRiskCard({ riskInput, currencyCode = 'INR' }: { riskInput: DefaultRiskInput, currencyCode?: string }) {
   const [expanded, setExpanded] = useState(false);
-  const risk = useMemo(() => predictDefaultRisk(riskInput), [riskInput]);
+  const risk = useMemo(() => predictDefaultRisk(riskInput, currencyCode), [riskInput, currencyCode]);
   const activeColor = riskColor(risk);
 
   return (
@@ -159,3 +159,4 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xs,
   },
 });
+

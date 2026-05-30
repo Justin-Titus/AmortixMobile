@@ -4,8 +4,7 @@ import { Colors, Spacing, Radius, Shadows } from '@/constants/theme';
 import { Sparkles, Lock, Check, TrendingDown, ArrowRight } from 'lucide-react-native';
 import { getLoans } from '@/services/loans';
 import { getProfile, type FinancialProfile } from '@/services/profile';
-import { detectInterestLeaks, predictDefaultRisk, monthsSince } from '@/lib/calculations/analysis';
-import { formatCurrency } from '@/lib/calculations/emi';
+import { detectInterestLeaks, predictDefaultRisk, monthsSince, formatCurrency } from '@/lib/calculations';
 import { MetricCard } from '@/components/ui/MetricCard';
 import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -35,6 +34,8 @@ export default function InsightsScreen() {
     setRefreshing(false);
   };
 
+  const currencyCode = profile?.currency ?? 'INR';
+
   const totals = useMemo(() => {
     const outstanding = loans.reduce((sum, loan) => sum + loan.outstandingBalance, 0);
     const emi = loans.reduce((sum, loan) => sum + loan.emiAmount, 0);
@@ -63,9 +64,10 @@ export default function InsightsScreen() {
         monthlyExpenses: profile.monthlyExpenses,
         hasEmergencyFund: profile.hasEmergencyFund,
         emergencyFundMonths: profile.emergencyFundMonths,
-      }
+      },
+      currencyCode
     );
-  }, [loans, profile]);
+  }, [loans, profile, currencyCode]);
 
   const riskRows = useMemo(() => {
     if (!profile) return [];
@@ -87,7 +89,7 @@ export default function InsightsScreen() {
         totalMonthlyEMI: totals.emi,
         numberOfActiveLoans: loans.length,
         debtToIncomeRatio: profile.monthlyIncome > 0 ? totals.emi / profile.monthlyIncome : 1,
-      });
+      }, currencyCode);
 
       return {
         loanId: loan.id,
@@ -95,7 +97,7 @@ export default function InsightsScreen() {
         risk: result,
       };
     }).sort((a, b) => b.risk.riskScore - a.risk.riskScore).slice(0, 3);
-  }, [loans, profile, totals.emi]);
+  }, [loans, profile, totals.emi, currencyCode]);
 
   if (loading) {
     return (
@@ -112,7 +114,7 @@ export default function InsightsScreen() {
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.emerald} />}
       >
-        <HeroSection totals={totals} />
+        <HeroSection totals={totals} currencyCode={currencyCode} />
         <Card>
           <EmptyState
             icon={<Sparkles size={20} color={Colors.slate} />}
@@ -131,7 +133,7 @@ export default function InsightsScreen() {
       contentContainerStyle={styles.content}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.emerald} />}
     >
-      <HeroSection totals={totals} />
+      <HeroSection totals={totals} currencyCode={currencyCode} />
 
       {!profile ? (
         <View style={styles.profileLocked}>
@@ -212,7 +214,7 @@ export default function InsightsScreen() {
                     </View>
                     <View style={{ flex: 1 }}>
                       <Typography weight="bold" color="navy" fontFamily="heading">
-                        ₹{Math.round(leak.annualLeakAmount).toLocaleString('en-IN')} annual leak
+                        {formatCurrency(leak.annualLeakAmount, currencyCode)} annual leak
                       </Typography>
                       <Typography variant="caption" color="slate">{leak.loanName}</Typography>
                     </View>
@@ -253,7 +255,7 @@ export default function InsightsScreen() {
   );
 }
 
-function HeroSection({ totals }: { totals: any }) {
+function HeroSection({ totals, currencyCode = 'INR' }: { totals: any; currencyCode?: string }) {
   return (
     <View style={styles.hero}>
       <View style={styles.badge}>
@@ -271,13 +273,13 @@ function HeroSection({ totals }: { totals: any }) {
       <View style={styles.metricsGrid}>
         <MetricCard 
           label="Total debt" 
-          value={formatCurrency(totals.outstanding)} 
+          value={formatCurrency(totals.outstanding, currencyCode)} 
           style={styles.metricHalf} 
           isEmpty={totals.outstanding === 0}
         />
         <MetricCard 
           label="Monthly EMI" 
-          value={formatCurrency(totals.emi)} 
+          value={formatCurrency(totals.emi, currencyCode)} 
           style={styles.metricHalf}
           isEmpty={totals.emi === 0}
         />
@@ -358,3 +360,4 @@ const styles = StyleSheet.create({
   },
   noLeaksDesc: { lineHeight: 20 },
 });
+

@@ -4,14 +4,22 @@ import {
 } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { getLoans, type LoanRecord } from '@/services/loans';
+import { getProfile } from '@/services/profile';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';
 import Typography from '@/components/ui/Typography';
 import { Colors, Spacing, Radius, Shadows } from '@/constants/theme';
-import { formatCurrency } from '@/lib/calculations/emi';
-import { Target, Zap, Snowflake } from 'lucide-react-native';
-import { compareAllStrategies } from '@/lib/calculations/strategies';
+import { useOfflineData } from '@/hooks/useOfflineData';
+import {
+  saveOfflineLoans, getOfflineLoans,
+  saveOfflineProfile, getOfflineProfile,
+} from '@/lib/offline/cache';
+import OfflineBanner from '@/components/ui/OfflineBanner';
+import { exportAmortizationSchedulePDF } from '@/lib/export/pdf';
+import { formatCurrency, compareAllStrategies, getCurrencyConfig } from '@/lib/calculations';
+import { Target, Zap, Snowflake, FileText } from 'lucide-react-native';
+import EMIOptimizerPanel from '@/components/strategy/EMIOptimizerPanel';
 import ExtraPaymentSimulator from '@/components/strategy/ExtraPaymentSimulator';
 import AmortizationTable from '@/components/strategy/AmortizationTable';
 import StrategyComparisonChart from '@/components/strategy/StrategyComparisonChart';
@@ -19,24 +27,45 @@ import StrategyComparisonChart from '@/components/strategy/StrategyComparisonCha
 type StrategyType = 'avalanche' | 'snowball' | 'hybrid';
 
 export default function StrategyScreen() {
-  const [loans, setLoans] = useState<LoanRecord[]>([]);
   const [strategy, setStrategy] = useState<StrategyType>('avalanche');
   const [extraPayment, setExtraPayment] = useState(0);
   const [oneTimePayment, setOneTimePayment] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const [extraBudget, setExtraBudget] = useState(0);
 
-  const load = useCallback(async () => {
-    const data = await getLoans();
-    setLoans(data.filter(l => l.outstandingBalance > 0));
+  const fetcher = useCallback(async () => {
+    const [loansData, profileData] = await Promise.all([getLoans(), getProfile()]);
+    return { loans: loansData, profile: profileData };
   }, []);
+
+  const cacher = useCallback(async (data: { loans: LoanRecord[], profile: any }) => {
+    await saveOfflineLoans(data.loans);
+    if (data.profile) await saveOfflineProfile(data.profile);
+  }, []);
+
+  const reader = useCallback(async () => {
+    const loans = await getOfflineLoans();
+    const profile = await getOfflineProfile();
+    return { loans, profile };
+  }, []);
+
+  const { data, loading, refreshing, isOffline, lastSync, refresh } = useOfflineData({
+    fetcher,
+    cacher,
+    reader
+  });
 
   useFocusEffect(
     useCallback(() => {
-      load().finally(() => setLoading(false));
-    }, [load])
+      refresh();
+    }, [refresh])
   );
-  const onRefresh = async () => { setRefreshing(true); await load(); setRefreshing(false); };
+
+  const loans = useMemo(() => {
+    const allLoans = data?.loans ?? [];
+    return allLoans.filter(l => l.outstandingBalance > 0);
+  }, [data]);
+
+  const currencyCode = data?.profile?.currency ?? 'INR';
 
   const results = useMemo(() => {
     if (loans.length === 0) return null;
@@ -57,6 +86,8 @@ export default function StrategyScreen() {
 
   const totalOutstanding = loans.reduce((s, l) => s + l.outstandingBalance, 0);
   const totalEMI = loans.reduce((s, l) => s + l.emiAmount, 0);
+  const avgRate = totalOutstanding > 0
+    ? loans.reduce((s, l) => s + l.interestRate * l.outstandingBalance, 0) / totalOutstanding : 0;
 
   const bestStrategy = useMemo(() => {
     if (!results) return null;
@@ -70,8 +101,8 @@ export default function StrategyScreen() {
 
   if (loading) {
     return (
-      <View style={s.center}>
-        <Typography color="slate">Loading strategies...</Typography>
+      <View style={[s.center, { backgroundColor: Colors.background }]}>
+        <Typography color="textMuted">Loading strategies...</Typography>
       </View>
     );
   }
@@ -79,43 +110,46 @@ export default function StrategyScreen() {
   const sortedLoans = [...loans].sort((a, b) => {
     if (strategy === 'avalanche') return b.interestRate - a.interestRate;
     if (strategy === 'snowball') return a.outstandingBalance - b.outstandingBalance;
-    // Hybrid: for display, we'll just show snowball-ish first but logic is smarter
     return a.outstandingBalance - b.outstandingBalance;
   });
 
   const chartData = results ? [
     { name: 'Baseline', interest: results.baseline.totalInterest, color: '#94A3B8' },
-    { name: 'Avalanche', interest: results.avalanche.totalInterestPaid, color: Colors.emerald },
+    { name: 'Avalanche', interest: results.avalanche.totalInterestPaid, color: '#118c76' },
     { name: 'Snowball', interest: results.snowball.totalInterestPaid, color: '#3B82F6' },
     { name: 'Hybrid', interest: results.hybrid.totalInterestPaid, color: '#F59E0B' },
   ] : [];
 
   return (
-    <View style={s.safe}>
-      <ScrollView contentContainerStyle={s.content}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.emerald} />}
-        showsVerticalScrollIndicator={false}>
+    <View style={[s.safe, { backgroundColor: Colors.background }]}>
+      <ScrollView 
+        contentContainerStyle={s.content}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={Colors.emerald} />}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Offline Alert Banner */}
+        {isOffline && <OfflineBanner lastSync={lastSync} />}
 
-        <View style={s.hero}>
+        <View style={[s.hero, { backgroundColor: Colors.surface, borderColor: Colors.borderLight }]}>
           <View style={s.badgeRow}>
             <Target size={12} color={Colors.emerald} />
-            <Typography variant="xs" weight="medium" color="slate" style={s.badgeText}>
+            <Typography variant="xs" weight="medium" color="textMuted" style={s.badgeText}>
               STRATEGY ENGINE
             </Typography>
           </View>
-          <Typography variant="h2" weight="bold" color="navy" fontFamily="heading" style={s.heroTitle}>
+          <Typography variant="h2" weight="bold" color="textPrimary" fontFamily="heading" style={s.heroTitle}>
             Repayment Strategy
           </Typography>
-          <Typography variant="md" color="slate" style={s.heroSub}>
+          <Typography variant="md" color="textMuted" style={s.heroSub}>
             Compare methods and prioritize your debt payoff for maximum savings.
           </Typography>
         </View>
 
         {loans.length === 0 ? (
           <Card>
-            <EmptyState icon={<Target size={20} color={Colors.slate} />}
+            <EmptyState icon={<Target size={20} color={Colors.textMuted} />}
               title="No active loans" description="Add loans to compare repayment strategies."
-              action={{ label: 'Add a loan', href: '/(drawer)/(tabs)/loans/add' }} />
+              action={isOffline ? undefined : { label: 'Add a loan', href: '/(drawer)/(tabs)/loans/add' }} />
           </Card>
         ) : (
           <>
@@ -124,26 +158,34 @@ export default function StrategyScreen() {
               oneTimePayment={oneTimePayment}
               onExtraPaymentChange={setExtraPayment}
               onOneTimePaymentChange={setOneTimePayment}
+              currencyCode={currencyCode}
+            />
+
+            <EMIOptimizerPanel
+              loans={loans}
+              extraBudget={extraBudget}
+              onExtraBudgetChange={setExtraBudget}
+              currencyCode={currencyCode}
             />
 
             {/* Savings Overview */}
             {activeResult && (
               <View style={s.savingsRow}>
                 <Card style={s.savingsCard}>
-                  <Typography variant="xs" color="slate" weight="medium">INTEREST SAVED</Typography>
+                  <Typography variant="xs" color="textMuted" weight="medium">INTEREST SAVED</Typography>
                   <Typography variant="xl" weight="bold" color="emerald">
-                    {formatCurrency(activeResult.totalSavedVsMinimum)}
+                    {formatCurrency(activeResult.totalSavedVsMinimum, currencyCode)}
                   </Typography>
-                  <Typography variant="caption" color="slate">vs baseline</Typography>
+                  <Typography variant="caption" color="textMuted">vs baseline</Typography>
                 </Card>
                 <Card style={s.savingsCard}>
-                  <Typography variant="xs" color="slate" weight="medium">PAYOFF EARLIER</Typography>
-                  <Typography variant="xl" weight="bold" color="navy">
+                  <Typography variant="xs" color="textMuted" weight="medium">PAYOFF EARLIER</Typography>
+                  <Typography variant="xl" weight="bold" color="textPrimary">
                     {results ? results.baseline.months - activeResult.monthsToPayoff : 0}
-                    <Typography variant="sm" weight="medium" color="slate"> mo</Typography>
+                    <Typography variant="sm" weight="medium" color="textMuted"> mo</Typography>
                   </Typography>
-                  <Typography variant="caption" color="slate">
-                    {activeResult.payoffDate.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}
+                  <Typography variant="caption" color="textMuted">
+                    {activeResult.payoffDate.toLocaleDateString(getCurrencyConfig(currencyCode).locale, { month: 'short', year: 'numeric' })}
                   </Typography>
                 </Card>
               </View>
@@ -151,48 +193,60 @@ export default function StrategyScreen() {
 
             {/* Strategy Comparison Chart */}
             {results && (
-              <StrategyComparisonChart data={chartData} activeStrategy={strategy} />
+              <StrategyComparisonChart data={chartData} activeStrategy={strategy} currencyCode={currencyCode} />
             )}
 
             {/* Strategy Toggle */}
-            <Typography variant="body" weight="bold" color="navy" fontFamily="heading" style={s.sectionTitleAbove}>
+            <Typography variant="body" weight="bold" color="textPrimary" fontFamily="heading" style={s.sectionTitleAbove}>
               Select Strategy
             </Typography>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.toggleScroll}>
-              <TouchableOpacity style={[s.toggle, strategy === 'avalanche' && s.toggleActive]}
+              <TouchableOpacity style={[
+                s.toggle, 
+                strategy === 'avalanche' && s.toggleActive,
+                { borderColor: Colors.borderMid, backgroundColor: strategy === 'avalanche' ? Colors.navyDeep : Colors.surface }
+              ]}
                 onPress={() => setStrategy('avalanche')}>
-                <Zap size={16} color={strategy === 'avalanche' ? Colors.white : Colors.emerald} />
+                <Zap size={16} color={strategy === 'avalanche' ? '#ffffff' : '#118c76'} />
                 <View>
-                  <Typography weight="bold" color={strategy === 'avalanche' ? 'white' : 'navy'}>
+                  <Typography weight="bold" color={strategy === 'avalanche' ? 'white' : 'textPrimary'}>
                     Avalanche {bestStrategy === 'avalanche' && <Typography variant="xs" color="emerald" weight="bold"> BEST</Typography>}
                   </Typography>
-                  <Typography variant="xs" color={strategy === 'avalanche' ? 'slateLight' : 'slate'}>
+                  <Typography variant="xs" color={strategy === 'avalanche' ? 'slateLight' : 'textMuted'}>
                     Highest rate first
                   </Typography>
                 </View>
               </TouchableOpacity>
 
-              <TouchableOpacity style={[s.toggle, strategy === 'snowball' && s.toggleActive]}
+              <TouchableOpacity style={[
+                s.toggle, 
+                strategy === 'snowball' && s.toggleActive,
+                { borderColor: Colors.borderMid, backgroundColor: strategy === 'snowball' ? Colors.navyDeep : Colors.surface }
+              ]}
                 onPress={() => setStrategy('snowball')}>
-                <Snowflake size={16} color={strategy === 'snowball' ? Colors.white : '#3B82F6'} />
+                <Snowflake size={16} color={strategy === 'snowball' ? '#ffffff' : '#3B82F6'} />
                 <View>
-                  <Typography weight="bold" color={strategy === 'snowball' ? 'white' : 'navy'}>
+                  <Typography weight="bold" color={strategy === 'snowball' ? 'white' : 'textPrimary'}>
                     Snowball {bestStrategy === 'snowball' && <Typography variant="xs" color="emerald" weight="bold"> BEST</Typography>}
                   </Typography>
-                  <Typography variant="xs" color={strategy === 'snowball' ? 'slateLight' : 'slate'}>
+                  <Typography variant="xs" color={strategy === 'snowball' ? 'slateLight' : 'textMuted'}>
                     Smallest balance first
                   </Typography>
                 </View>
               </TouchableOpacity>
 
-              <TouchableOpacity style={[s.toggle, strategy === 'hybrid' && s.toggleActive]}
+              <TouchableOpacity style={[
+                s.toggle, 
+                strategy === 'hybrid' && s.toggleActive,
+                { borderColor: Colors.borderMid, backgroundColor: strategy === 'hybrid' ? Colors.navyDeep : Colors.surface }
+              ]}
                 onPress={() => setStrategy('hybrid')}>
-                <Target size={16} color={strategy === 'hybrid' ? Colors.white : '#F59E0B'} />
+                <Target size={16} color={strategy === 'hybrid' ? '#ffffff' : '#F59E0B'} />
                 <View>
-                  <Typography weight="bold" color={strategy === 'hybrid' ? 'white' : 'navy'}>
+                  <Typography weight="bold" color={strategy === 'hybrid' ? 'white' : 'textPrimary'}>
                     Hybrid {bestStrategy === 'hybrid' && <Typography variant="xs" color="emerald" weight="bold"> BEST</Typography>}
                   </Typography>
-                  <Typography variant="xs" color={strategy === 'hybrid' ? 'slateLight' : 'slate'}>
+                  <Typography variant="xs" color={strategy === 'hybrid' ? 'slateLight' : 'textMuted'}>
                     Quick win then rate
                   </Typography>
                 </View>
@@ -201,10 +255,10 @@ export default function StrategyScreen() {
 
             {/* Priority Order */}
             <Card>
-              <Typography variant="body" weight="bold" color="navy" fontFamily="heading" style={s.sectionTitle}>
+              <Typography variant="body" weight="bold" color="textPrimary" fontFamily="heading" style={s.sectionTitle}>
                 Priority order
               </Typography>
-              <Typography variant="caption" color="slate" style={s.sectionSub}>
+              <Typography variant="caption" color="textMuted" style={s.sectionSub}>
                 {strategy === 'avalanche'
                   ? 'Mathematical optimal. Pay highest interest rate first.'
                   : strategy === 'snowball'
@@ -212,14 +266,14 @@ export default function StrategyScreen() {
                   : 'Quick win first, then switch to highest interest rate.'}
               </Typography>
               {sortedLoans.map((loan, i) => (
-                <View key={loan.id} style={s.priorityRow}>
-                  <View style={s.priorityNum}>
-                    <Typography variant="caption" weight="bold" color="navy">#{i + 1}</Typography>
+                <View key={loan.id} style={[s.priorityRow, { borderBottomColor: Colors.borderLight }]}>
+                  <View style={[s.priorityNum, { backgroundColor: '#f1f5f9' }]}>
+                    <Typography variant="caption" weight="bold" color="textPrimary">#{i + 1}</Typography>
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Typography variant="body" weight="medium" color="navy">{loan.name}</Typography>
-                    <Typography variant="sm" color="slate" style={s.priorityMeta}>
-                      {formatCurrency(loan.outstandingBalance)} · {loan.interestRate}%
+                    <Typography variant="body" weight="medium" color="textPrimary">{loan.name}</Typography>
+                    <Typography variant="sm" color="textMuted" style={s.priorityMeta}>
+                      {formatCurrency(loan.outstandingBalance, currencyCode)} · {loan.interestRate}%
                     </Typography>
                   </View>
                   <Badge text={i === 0 ? 'Target' : 'Minimum'} variant={i === 0 ? 'green' : 'slate'} />
@@ -227,8 +281,44 @@ export default function StrategyScreen() {
               ))}
             </Card>
 
+            {/* PDF Export Button */}
             {activeResult && (
-              <AmortizationTable schedule={activeResult.schedule} />
+              <TouchableOpacity
+                style={[s.exportBtn, { borderColor: Colors.borderLight, backgroundColor: Colors.surface }]}
+                onPress={async () => {
+                  const pdfSchedule = activeResult.schedule.map(row => {
+                    const totalPayment = row.allocations.reduce((sum, a) => sum + a.payment, 0);
+                    const totalPrincipal = row.allocations.reduce((sum, a) => sum + a.principal, 0);
+                    const totalInterest = row.allocations.reduce((sum, a) => sum + a.interest, 0);
+                    return {
+                      month: row.month,
+                      emi: totalPayment,
+                      principalComponent: totalPrincipal,
+                      interestComponent: totalInterest,
+                      outstandingBalance: row.totalDebtRemaining,
+                    };
+                  });
+
+                  await exportAmortizationSchedulePDF({
+                    loanName: `Consolidated Payoff (${strategy.toUpperCase()})`,
+                    principal: totalOutstanding,
+                    interestRate: Number(avgRate.toFixed(2)),
+                    tenureMonths: activeResult.monthsToPayoff,
+                    emiAmount: totalEMI + extraPayment,
+                    currencyCode,
+                    schedule: pdfSchedule,
+                  });
+                }}
+              >
+                <FileText size={16} color={Colors.emerald} />
+                <Typography variant="body" weight="semiBold" color="emerald">
+                  Export payoff schedule PDF
+                </Typography>
+              </TouchableOpacity>
+            )}
+
+            {activeResult && (
+              <AmortizationTable schedule={activeResult.schedule} currencyCode={currencyCode} />
             )}
           </>
         )}
@@ -240,12 +330,12 @@ export default function StrategyScreen() {
 }
 
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.background },
+  safe: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   content: { padding: Spacing.base, gap: Spacing.base },
   hero: {
-    backgroundColor: Colors.white, borderRadius: Radius.card, padding: Spacing.lg,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.7)', ...Shadows.card,
+    borderRadius: Radius.card, padding: Spacing.lg,
+    borderWidth: 1,
   },
   badgeRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: Spacing.sm },
   badgeText: { letterSpacing: 0.6 },
@@ -256,22 +346,44 @@ const s = StyleSheet.create({
   sectionTitleAbove: { marginTop: Spacing.md, marginBottom: Spacing.sm },
   toggleScroll: { gap: Spacing.md, paddingRight: Spacing.xl },
   toggle: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    paddingHorizontal: Spacing.md, paddingVertical: Spacing.base, 
-    borderRadius: Radius.lg, borderWidth: 1,
-    borderColor: Colors.borderMid, backgroundColor: Colors.white,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.base, 
+    borderRadius: Radius.lg,
+    borderWidth: 1,
     minWidth: 160,
   },
-  toggleActive: { backgroundColor: Colors.navy, borderColor: Colors.navy },
+  toggleActive: { },
   sectionTitle: { marginBottom: Spacing.sm },
   sectionSub: { marginBottom: Spacing.base, lineHeight: 18 },
   priorityRow: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
-    paddingVertical: Spacing.md, borderBottomWidth: 1, borderBottomColor: '#f1f5f9',
+    paddingVertical: Spacing.md, borderBottomWidth: 1,
   },
   priorityNum: {
-    width: 32, height: 32, borderRadius: 10, backgroundColor: '#f1f5f9',
-    alignItems: 'center', justifyContent: 'center',
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   priorityMeta: { marginTop: 2, },
+  exportBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderRadius: Radius.button,
+    paddingVertical: Spacing.base,
+    shadowColor: '#09111f',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
+    marginVertical: Spacing.xs,
+  },
 });
+

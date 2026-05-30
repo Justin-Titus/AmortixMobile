@@ -26,6 +26,7 @@ export type LoanRecord = {
   nextEmiDate: string | null;
   lender: string | null;
   notes: string | null;
+  currency: string;
   createdAt: string;
   updatedAt: string;
   payments?: PaymentRecord[];
@@ -53,6 +54,7 @@ export type LoanInput = {
   startDate: string;
   lender?: string | null;
   notes?: string | null;
+  currency?: string;
 };
 
 export type PaymentInput = {
@@ -117,6 +119,7 @@ export async function createLoan(input: LoanInput) {
     startDate: input.startDate,
     lender: input.lender ?? null,
     notes: input.notes ?? null,
+    currency: input.currency ?? 'INR',
     createdAt: now,
     updatedAt: now,
   });
@@ -146,6 +149,7 @@ export async function updateLoan(id: string, input: LoanInput) {
       startDate: input.startDate,
       lender: input.lender ?? null,
       notes: input.notes ?? null,
+      currency: input.currency ?? 'INR',
       updatedAt: new Date().toISOString(),
     })
     .eq('id', id)

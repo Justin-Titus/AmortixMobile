@@ -7,7 +7,7 @@ import Animated, {
   withTiming,
   Easing,
 } from 'react-native-reanimated';
-import { getAffordabilityZoneLabel } from '@/lib/calculations/affordability';
+import { getAffordabilityZoneLabel } from '@/lib/calculations';
 import Typography from '../ui/Typography';
 import { Colors } from '@/constants/theme';
 
@@ -97,3 +97,4 @@ const styles = StyleSheet.create({
     lineHeight: 32,
   },
 });
+

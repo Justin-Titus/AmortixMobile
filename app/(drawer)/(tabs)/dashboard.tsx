@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import {
   View, ScrollView, RefreshControl, TouchableOpacity, StyleSheet,
 } from 'react-native';
@@ -12,12 +12,17 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Badge } from '@/components/ui/Badge';
 import Typography from '@/components/ui/Typography';
 import { Colors, Spacing, Radius } from '@/constants/theme';
-import { formatCurrency, formatCompactCurrency } from '@/lib/calculations/emi';
+import { useOfflineData } from '@/hooks/useOfflineData';
 import {
-  Sparkles, ArrowRight, Plus, MessageSquarePlus, AlertTriangle, TrendingUp,
+  saveOfflineLoans, getOfflineLoans,
+  saveOfflineProfile, getOfflineProfile,
+  saveOfflineSnapshots, getOfflineSnapshots
+} from '@/lib/offline/cache';
+import OfflineBanner from '@/components/ui/OfflineBanner';
+import { formatCurrency, formatCompactCurrency, calculateAffordabilityScore, calculateStrategy, getCurrencyConfig } from '@/lib/calculations';
+import {
+  Sparkles, ArrowRight, Plus, MessageSquarePlus, AlertTriangle,
 } from 'lucide-react-native';
-import { calculateAffordabilityScore } from '@/lib/calculations/affordability';
-import { calculateStrategy } from '@/lib/calculations/strategies';
 import AffordabilityGauge from '@/components/dashboard/AffordabilityGauge';
 import DebtDistribution from '@/components/dashboard/DebtDistribution';
 import HealthTrendChart from '@/components/analysis/HealthTrendChart';
@@ -27,34 +32,49 @@ const loanColors = ['#1E3A5F', '#059669', '#F59E0B', '#378ADD', '#DC2626', '#34D
 export default function DashboardScreen() {
   const { user } = useAuth();
   const router = useRouter();
-  const [loans, setLoans] = useState<LoanRecord[]>([]);
-  const [profile, setProfile] = useState<FinancialProfile | null>(null);
-  const [snapshots, setSnapshots] = useState<HealthSnapshot[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
 
-  const loadData = useCallback(async () => {
+  // Define offline-aware fetchers, cachers, and readers
+  const fetcher = useCallback(async () => {
     const [loansData, profileData, snapshotsData] = await Promise.all([
       getLoans(),
       getProfile(),
       getHealthSnapshots()
     ]);
-    setLoans(loansData);
-    setProfile(profileData);
-    setSnapshots(snapshotsData);
+    return { loans: loansData, profile: profileData, snapshots: snapshotsData };
   }, []);
 
+  const cacher = useCallback(async (data: { loans: LoanRecord[], profile: FinancialProfile | null, snapshots: HealthSnapshot[] }) => {
+    await saveOfflineLoans(data.loans);
+    if (data.profile) await saveOfflineProfile(data.profile);
+    await saveOfflineSnapshots(data.snapshots);
+  }, []);
+
+  const reader = useCallback(async () => {
+    const loans = await getOfflineLoans();
+    const profile = await getOfflineProfile();
+    const snapshots = await getOfflineSnapshots();
+    return { loans, profile, snapshots };
+  }, []);
+
+  const { data, loading, refreshing, isOffline, lastSync, refresh } = useOfflineData({
+    fetcher,
+    cacher,
+    reader
+  });
+
+  // Re-fetch when dashboard comes into focus (if online)
   useFocusEffect(
     useCallback(() => {
-      loadData().finally(() => setLoading(false));
-    }, [loadData])
+      refresh();
+    }, [refresh])
   );
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await loadData();
-    setRefreshing(false);
-  };
+  const loans = data?.loans ?? [];
+  const profile = data?.profile ?? null;
+  const snapshots = data?.snapshots ?? [];
+
+  const currencyCode = profile?.currency ?? 'INR';
+  const currencyConfig = getCurrencyConfig(currencyCode);
 
   const totalOutstanding = loans.reduce((s, l) => s + l.outstandingBalance, 0);
   const totalEMI = loans.reduce((s, l) => s + l.emiAmount, 0);
@@ -67,7 +87,6 @@ export default function DashboardScreen() {
 
   const emiToIncomeRatio = profile?.monthlyIncome
     ? Math.round((totalEMI / profile.monthlyIncome) * 100) : 0;
-
 
   const greeting = (() => {
     const h = new Date().getHours();
@@ -128,7 +147,7 @@ export default function DashboardScreen() {
     const months = strategyResults.baseline.monthsToPayoff - Math.min(strategyResults.avalanche.monthsToPayoff, strategyResults.snowball.monthsToPayoff);
 
     if (saved > 0) {
-      parts.push(`Optimal strategy (${best}) saves you ${formatCurrency(saved)}.`);
+      parts.push(`Optimal strategy (${best}) saves you ${formatCurrency(saved, currencyCode)}.`);
     }
     if (months > 0) {
       parts.push(`You can be debt-free ${months} months earlier.`);
@@ -137,9 +156,8 @@ export default function DashboardScreen() {
       parts.push(`Financial health is in the ${affordability.zone.toLowerCase()} zone.`);
     }
 
-    return parts.join(' ') || `Managing ${formatCurrency(totalOutstanding)} across ${loans.length} active loans.`;
-  }, [hasLoans, strategyResults, affordability, totalOutstanding, loans.length]);
-
+    return parts.join(' ') || `Managing ${formatCurrency(totalOutstanding, currencyCode)} across ${loans.length} active loans.`;
+  }, [hasLoans, strategyResults, affordability, totalOutstanding, loans.length, currencyCode]);
 
   const distributionData = useMemo(() => {
     return loans
@@ -163,9 +181,12 @@ export default function DashboardScreen() {
     <ScrollView
       style={s.scroll}
       contentContainerStyle={s.content}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.emerald} />}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={Colors.emerald} />}
       showsVerticalScrollIndicator={false}
     >
+      {/* Offline Alert Banner */}
+      {isOffline && <OfflineBanner lastSync={lastSync} />}
+
       {/* Page Hero */}
       <View style={s.hero}>
         <View style={s.badgeRow}>
@@ -185,7 +206,7 @@ export default function DashboardScreen() {
         <View style={s.statsRow}>
           {[
             { label: 'Open loans', value: String(loans.length) },
-            { label: 'Outstanding', value: formatCompactCurrency(totalOutstanding) },
+            { label: 'Outstanding', value: formatCompactCurrency(totalOutstanding, currencyCode) },
             { label: 'Avg rate', value: `${avgRate.toFixed(1)}%` },
           ].map((st) => (
             <View key={st.label} style={s.statItem}>
@@ -201,7 +222,7 @@ export default function DashboardScreen() {
 
         {/* Actions */}
         <View style={s.heroActions}>
-          <TouchableOpacity style={s.primaryBtn} onPress={() => router.push('/(drawer)/(tabs)/loans/add')}>
+          <TouchableOpacity style={s.primaryBtn} onPress={() => !isOffline && router.push('/(drawer)/(tabs)/loans/add')} disabled={isOffline}>
             <Typography weight="bold" color="white">Add loan</Typography>
             <ArrowRight size={14} color={Colors.white} />
           </TouchableOpacity>
@@ -230,15 +251,15 @@ export default function DashboardScreen() {
 
       {/* Metric Cards */}
       <View style={s.metricsGrid}>
-        <MetricCard label="Total outstanding" value={formatCurrency(totalOutstanding)}
+        <MetricCard label="Total outstanding" value={formatCurrency(totalOutstanding, currencyCode)}
           description="Across every active balance" isEmpty={!hasLoans} style={s.metricHalf} />
-        <MetricCard label="Monthly EMI" value={formatCurrency(totalEMI)}
+        <MetricCard label="Monthly EMI" value={formatCurrency(totalEMI, currencyCode)}
           description="Current recurring outflow" isEmpty={!hasLoans} style={s.metricHalf} />
         <MetricCard label="Avg rate" value={`${avgRate.toFixed(2)}%`}
           description="Weighted average" isEmpty={!hasLoans} style={s.metricHalf}
           valueColor={avgRate > 12 ? 'amber' : 'default'} />
         <MetricCard label="Debt-free by"
-          value={debtFreeDate ? debtFreeDate.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : '-'}
+          value={debtFreeDate ? debtFreeDate.toLocaleDateString(currencyConfig.locale, { month: 'short', year: 'numeric' }) : '-'}
           description={debtFreeDate ? 'With current strategy' : 'Add loans to see'}
           isEmpty={!hasLoans} style={s.metricHalf} valueColor={debtFreeDate ? 'amber' : 'muted'} />
       </View>
@@ -255,7 +276,7 @@ export default function DashboardScreen() {
             icon={<MessageSquarePlus size={20} color={Colors.emerald} />}
             title="Your cockpit is ready"
             description="Add your first loan to start tracking repayment progress."
-            action={{ label: 'Add your first loan', href: '/(drawer)/(tabs)/loans/add' }}
+            action={isOffline ? undefined : { label: 'Add your first loan', href: '/(drawer)/(tabs)/loans/add' }}
           />
         </Card>
       ) : (
@@ -275,6 +296,7 @@ export default function DashboardScreen() {
             {loans.map((loan, index) => {
               const pct = Math.max(0, Math.min(100, ((loan.principal - loan.outstandingBalance) / Math.max(loan.principal, 1)) * 100));
               const color = loanColors[index % loanColors.length];
+              const loanCurrency = loan.currency || currencyCode;
               return (
                 <TouchableOpacity
                   key={loan.id}
@@ -291,8 +313,8 @@ export default function DashboardScreen() {
                     <Badge text={`${loan.interestRate.toFixed(2)}%`} variant="slate" />
                   </View>
                   <View style={s.loanMeta}>
-                    <Typography variant="caption" color="slate">{formatCurrency(loan.outstandingBalance)} left</Typography>
-                    <Typography variant="caption" color="slate">{formatCurrency(loan.emiAmount)}/mo</Typography>
+                    <Typography variant="caption" color="slate">{formatCurrency(loan.outstandingBalance, loanCurrency)} left</Typography>
+                    <Typography variant="caption" color="slate">{formatCurrency(loan.emiAmount, loanCurrency)}/mo</Typography>
                   </View>
                   <View style={s.progressBg}>
                     <View style={[s.progressFill, { width: `${pct}%`, backgroundColor: color }]} />
@@ -304,7 +326,8 @@ export default function DashboardScreen() {
 
           <TouchableOpacity 
             style={s.cardActionBtn} 
-            onPress={() => router.push('/(drawer)/(tabs)/loans/add')}
+            onPress={() => !isOffline && router.push('/(drawer)/(tabs)/loans/add')}
+            disabled={isOffline}
           >
             <Plus size={16} color={Colors.emerald} />
             <Typography variant="body" weight="semiBold" color="emerald">
@@ -442,3 +465,4 @@ const s = StyleSheet.create({
   sectionTitle: { marginBottom: Spacing.sm },
   emptyGauge: { height: 90, alignItems: 'center', justifyContent: 'center', borderStyle: 'dashed', borderWidth: 1, borderColor: Colors.borderMid, borderRadius: Radius.lg },
 });
+

@@ -3,7 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import { AlertTriangle } from 'lucide-react-native';
 import { Colors, Spacing, Radius } from '@/constants/theme';
 import Typography from '../ui/Typography';
-import { formatCurrency } from '@/lib/calculations/emi';
+import { formatCurrency } from '@/lib/calculations';
 
 type LoanLeak = {
   id: string;
@@ -16,9 +16,10 @@ type LoanLeak = {
 type InterestLeakDetectorProps = {
   leaks: LoanLeak[];
   totalInterestPerMonth: number;
+  currencyCode?: string;
 };
 
-export default function InterestLeakDetector({ leaks, totalInterestPerMonth }: InterestLeakDetectorProps) {
+export default function InterestLeakDetector({ leaks, totalInterestPerMonth, currencyCode = 'INR' }: InterestLeakDetectorProps) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -41,7 +42,7 @@ export default function InterestLeakDetector({ leaks, totalInterestPerMonth }: I
               </Typography>
             </View>
             <Typography variant="sm" color="slate">
-              {formatCurrency(loan.monthlyInterest)} / mo
+              {formatCurrency(loan.monthlyInterest, currencyCode)} / mo
             </Typography>
           </View>
           
@@ -62,7 +63,7 @@ export default function InterestLeakDetector({ leaks, totalInterestPerMonth }: I
       <View style={styles.footer}>
         <Typography variant="sm" color="slate">Total monthly interest paid:</Typography>
         <Typography variant="body" weight="bold" color="red">
-          {formatCurrency(totalInterestPerMonth)}
+          {formatCurrency(totalInterestPerMonth, currencyCode)}
         </Typography>
       </View>
     </View>
@@ -130,3 +131,4 @@ const styles = StyleSheet.create({
     borderTopColor: Colors.borderLight,
   },
 });
+

@@ -6,9 +6,10 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { createLoan, getLoan, updateLoan } from '@/services/loans';
+import { getProfile } from '@/services/profile';
 import { Input } from '@/components/ui/Input';
 import { Colors, Radius, Spacing, Shadows } from '@/constants/theme';
-import { calculateEMI, calculateTenure } from '@/lib/calculations/emi';
+import { calculateEMI, calculateTenure, CURRENCIES, getCurrencyConfig } from '@/lib/calculations';
 import { Save, Plus, ArrowLeft, Calendar as CalendarIcon } from 'lucide-react-native';
 import Typography from '@/components/ui/Typography';
 
@@ -31,15 +32,21 @@ export default function AddLoanScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [lender, setLender] = useState('');
   const [notes, setNotes] = useState('');
+  const [currency, setCurrency] = useState('INR');
   
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(!!id);
+  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (id) {
-      getLoan(id).then(l => {
+    const init = async () => {
+      const p = await getProfile();
+      if (p) {
+        setCurrency(p.currency || 'INR');
+      }
+      if (id) {
+        const l = await getLoan(id);
         if (l) {
           setName(l.name);
           setLoanType(l.loanType);
@@ -52,10 +59,12 @@ export default function AddLoanScreen() {
           setStartDate(new Date(l.startDate));
           setLender(l.lender || '');
           setNotes(l.notes || '');
+          setCurrency(l.currency || p?.currency || 'INR');
         }
-        setLoading(false);
-      });
-    }
+      }
+      setLoading(false);
+    };
+    init();
   }, [id]);
   
   useEffect(() => {
@@ -121,6 +130,7 @@ export default function AddLoanScreen() {
       startDate: startDate.toISOString(),
       lender: lender.trim() || null,
       notes: notes.trim() || null,
+      currency,
     };
 
     const result = id 
@@ -138,6 +148,8 @@ export default function AddLoanScreen() {
   };
 
   if (loading) return null;
+
+  const currentConfig = getCurrencyConfig(currency);
 
   return (
     <KeyboardAvoidingView 
@@ -188,11 +200,24 @@ export default function AddLoanScreen() {
           ))}
         </ScrollView>
 
-        <Input label="PRINCIPAL (₹)" placeholder="e.g. 5000000" value={principal}
+        <Typography variant="xs" weight="bold" color="navy" fontFamily="heading" style={s.label}>
+          LOAN CURRENCY
+        </Typography>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.chipScroll}>
+          {Object.keys(CURRENCIES).map(code => (
+            <TouchableOpacity key={code} style={[s.chip, currency === code && s.chipActive]} onPress={() => setCurrency(code)}>
+              <Typography variant="xs" weight="bold" color={currency === code ? 'white' : 'slate'}>
+                {code} ({CURRENCIES[code].symbol})
+              </Typography>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        <Input label={`PRINCIPAL (${currentConfig.symbol})`} placeholder="e.g. 5000000" value={principal}
           onChangeText={(v) => { setPrincipal(v); if(fieldErrors.principal) setFieldErrors({...fieldErrors, principal: ''}); }} 
           keyboardType="numeric" error={fieldErrors.principal} containerStyle={s.gap} />
           
-        <Input label="OUTSTANDING BALANCE (₹)" placeholder="Leave blank if same as principal" value={outstanding}
+        <Input label={`OUTSTANDING BALANCE (${currentConfig.symbol})`} placeholder="Leave blank if same as principal" value={outstanding}
           onChangeText={setOutstanding} keyboardType="numeric" containerStyle={s.gap}
           hint="Leave blank if same as principal" />
           
@@ -218,7 +243,7 @@ export default function AddLoanScreen() {
           onChangeText={(v) => { setTenure(v); if(fieldErrors.tenure) setFieldErrors({...fieldErrors, tenure: ''}); }} 
           keyboardType="numeric" error={fieldErrors.tenure} containerStyle={s.gap} />
           
-        <Input label="EMI AMOUNT (₹)" placeholder="e.g. 45000" value={emi}
+        <Input label={`EMI AMOUNT (${currentConfig.symbol})`} placeholder="e.g. 45000" value={emi}
           onChangeText={(v) => { handleEmiChange(v); if(fieldErrors.emi) setFieldErrors({...fieldErrors, emi: ''}); }} 
           keyboardType="numeric" error={fieldErrors.emi} containerStyle={s.gap} />
 
@@ -228,7 +253,7 @@ export default function AddLoanScreen() {
         </Typography>
         <TouchableOpacity style={s.datePickerBtn} onPress={() => setShowDatePicker(true)}>
           <Typography variant="body" color="navy">
-            {startDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
+            {startDate.toLocaleDateString(currentConfig.locale, { day: 'numeric', month: 'long', year: 'numeric' })}
           </Typography>
           <CalendarIcon size={18} color={Colors.slate} />
         </TouchableOpacity>
@@ -297,3 +322,4 @@ const s = StyleSheet.create({
   },
   disabled: { opacity: 0.5 },
 });
+

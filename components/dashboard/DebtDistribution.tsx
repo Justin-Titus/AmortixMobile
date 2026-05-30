@@ -3,7 +3,7 @@ import { View, StyleSheet, Dimensions } from 'react-native';
 import Svg, { Path, G, Text as SvgText } from 'react-native-svg';
 import { Colors, Spacing } from '@/constants/theme';
 import Typography from '../ui/Typography';
-import { formatCompactCurrency } from '@/lib/calculations/emi';
+import { formatCurrency } from '@/lib/calculations';
 
 type DebtDistributionProps = {
   loans: Array<{
@@ -11,6 +11,7 @@ type DebtDistributionProps = {
     balance: number;
     color: string;
   }>;
+  currencyCode?: string;
 };
 
 const CHART_SIZE = 160;
@@ -18,7 +19,7 @@ const STROKE_WIDTH = 20;
 const RADIUS = (CHART_SIZE - STROKE_WIDTH) / 2;
 const CENTER = CHART_SIZE / 2;
 
-export default function DebtDistribution({ loans }: DebtDistributionProps) {
+export default function DebtDistribution({ loans, currencyCode = 'INR' }: DebtDistributionProps) {
   const total = loans.reduce((s, l) => s + l.balance, 0);
   
   if (total === 0) return null;
@@ -80,7 +81,7 @@ export default function DebtDistribution({ loans }: DebtDistributionProps) {
               fontWeight="bold"
               fill={Colors.navy}
             >
-              {formatCompactCurrency(total)}
+              {formatCurrency(total, currencyCode, { compact: true })}
             </SvgText>
           </Svg>
         </View>
@@ -137,3 +138,4 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 });
+

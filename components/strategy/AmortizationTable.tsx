@@ -2,14 +2,14 @@ import React from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { Colors, Spacing, Radius } from '@/constants/theme';
 import Typography from '../ui/Typography';
-import { formatCurrency } from '@/lib/calculations/emi';
-import type { MonthlyAllocation } from '@/lib/calculations/strategies';
+import { formatCurrency, type MonthlyAllocation } from '@/lib/calculations';
 
 type AmortizationTableProps = {
   schedule: MonthlyAllocation[];
+  currencyCode?: string;
 };
 
-export default function AmortizationTable({ schedule }: AmortizationTableProps) {
+export default function AmortizationTable({ schedule, currencyCode = 'INR' }: AmortizationTableProps) {
   // Only show first 36 months to keep it performant
   const displaySchedule = schedule.slice(0, 36);
 
@@ -33,17 +33,17 @@ export default function AmortizationTable({ schedule }: AmortizationTableProps) 
           </View>
 
           {displaySchedule.map((row) => {
-            const totalPayment = row.allocations.reduce((s, a) => s + a.payment, 0);
-            const totalPrincipal = row.allocations.reduce((s, a) => s + a.principal, 0);
-            const totalInterest = row.allocations.reduce((s, a) => s + a.interest, 0);
+            const totalPayment = row.allocations.reduce((s: number, a: { payment: number }) => s + a.payment, 0);
+            const totalPrincipal = row.allocations.reduce((s: number, a: { principal: number }) => s + a.principal, 0);
+            const totalInterest = row.allocations.reduce((s: number, a: { interest: number }) => s + a.interest, 0);
 
             return (
               <View key={row.month} style={styles.tableRow}>
                 <Typography variant="xs" color="navy" style={[styles.cell, { width: 50 }]}>{row.month}</Typography>
-                <Typography variant="xs" color="navy" weight="medium" style={[styles.cell, { width: 100 }]}>{formatCurrency(totalPayment)}</Typography>
-                <Typography variant="xs" color="emerald" style={[styles.cell, { width: 100 }]}>{formatCurrency(totalPrincipal)}</Typography>
-                <Typography variant="xs" color="red" style={[styles.cell, { width: 100 }]}>{formatCurrency(totalInterest)}</Typography>
-                <Typography variant="xs" color="navy" weight="semiBold" style={[styles.cell, { width: 120 }]}>{formatCurrency(row.totalDebtRemaining)}</Typography>
+                <Typography variant="xs" color="navy" weight="medium" style={[styles.cell, { width: 100 }]}>{formatCurrency(totalPayment, currencyCode)}</Typography>
+                <Typography variant="xs" color="emerald" style={[styles.cell, { width: 100 }]}>{formatCurrency(totalPrincipal, currencyCode)}</Typography>
+                <Typography variant="xs" color="red" style={[styles.cell, { width: 100 }]}>{formatCurrency(totalInterest, currencyCode)}</Typography>
+                <Typography variant="xs" color="navy" weight="semiBold" style={[styles.cell, { width: 120 }]}>{formatCurrency(row.totalDebtRemaining, currencyCode)}</Typography>
               </View>
             );
           })}
@@ -97,3 +97,4 @@ const styles = StyleSheet.create({
     marginTop: Spacing.md,
   },
 });
+
