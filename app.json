@@ -9,7 +9,7 @@
     "newArchEnabled": true,
     "scheme": "amortix",
     "splash": {
-      "image": "./assets/Amortix.png",
+      "image": "./assets/Amortix-adaptive.png",
       "resizeMode": "contain",
       "backgroundColor": "#0d1b2f"
     },
@@ -19,7 +19,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/Amortix.png",
+        "foregroundImage": "./assets/Amortix-adaptive.png",
         "backgroundColor": "#0d1b2f"
       },
 

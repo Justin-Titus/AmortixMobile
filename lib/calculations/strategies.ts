@@ -34,30 +34,59 @@ export interface StrategyResult {
   schedule: MonthlyAllocation[];
 }
 
-/**
- * Calculate the "minimum payment only" baseline for comparison
- */
 export function calculateMinimumPaymentBaseline(
   loans: StrategyLoanInput[]
 ): { totalInterest: number; months: number } {
-  const activeLoans = loans.map((loan) => ({ ...loan, outstanding: loan.outstanding }));
+  // Deep clone loans to avoid mutations
+  const activeLoans = loans.map((l) => ({
+    ...l,
+    outstanding: l.outstanding,
+  }));
+
   let totalInterest = 0;
   let month = 0;
   const maxMonths = 600;
+  let carryForwardFreedEMI = 0;
 
-  while (activeLoans.some((loan) => loan.outstanding > 0.5) && month < maxMonths) {
+  while (activeLoans.some((l) => l.outstanding > 0.5) && month < maxMonths) {
     month++;
 
-    for (const loan of activeLoans) {
+    // Avalanche sorting for baseline cascading
+    const sortedLoans = [...activeLoans]
+      .filter((l) => l.outstanding > 0.5)
+      .sort((a, b) => b.annualRate - a.annualRate);
+
+    let extraRemaining = carryForwardFreedEMI;
+
+    for (const loan of sortedLoans) {
       if (loan.outstanding <= 0.5) continue;
 
-      const monthlyRate = loan.annualRate / 12 / 100;
-      const interest = loan.outstanding * monthlyRate;
+      const r = loan.annualRate / 12 / 100;
+      const interest = loan.outstanding * r;
       totalInterest += interest;
 
-      const payment = Math.min(loan.emi, loan.outstanding + interest);
-      const principal = payment - interest;
+      let payment = Math.min(loan.emi, loan.outstanding + interest);
+      let principal = payment - interest;
+      const startingOutstanding = loan.outstanding;
+
+      if (extraRemaining > 0) {
+        const extraForThis = Math.min(
+          extraRemaining,
+          Math.max(0, loan.outstanding - principal)
+        );
+
+        if (extraForThis > 0) {
+          payment += extraForThis;
+          principal += extraForThis;
+          extraRemaining -= extraForThis;
+        }
+      }
+
       loan.outstanding = Math.max(0, loan.outstanding - principal);
+
+      if (startingOutstanding > 0.5 && loan.outstanding <= 0.5) {
+        carryForwardFreedEMI += loan.emi;
+      }
     }
   }
 
@@ -74,18 +103,19 @@ export function calculateStrategy(
   loans: StrategyLoanInput[],
   extraMonthlyBudget: number,
   strategy: "avalanche" | "snowball" | "hybrid",
-  oneTimePayment: number = 0
+  oneTimePayment: number = 0,
+  baseline?: { totalInterest: number; months: number }
 ): StrategyResult {
-  return runStrategy(loans, extraMonthlyBudget, strategy, oneTimePayment);
+  return runStrategy(loans, extraMonthlyBudget, strategy, oneTimePayment, baseline);
 }
 
 function runStrategy(
   inputLoans: StrategyLoanInput[],
   extraBudget: number,
   strategy: "avalanche" | "snowball" | "hybrid",
-  oneTimePayment: number = 0
+  oneTimePayment: number = 0,
+  providedBaseline?: { totalInterest: number; months: number }
 ): StrategyResult {
-  // Deep clone loans to avoid mutations
   const activeLoans = inputLoans.map((l) => ({
     ...l,
     outstanding: l.outstanding,
@@ -94,18 +124,16 @@ function runStrategy(
   const schedule: MonthlyAllocation[] = [];
   let totalInterest = 0;
   let month = 0;
-  const maxMonths = 600; // Safety: cap at 50 years
+  const maxMonths = 600;
   let hybridSwitched = false;
   let carryForwardFreedEMI = 0;
 
   while (activeLoans.some((l) => l.outstanding > 0.5) && month < maxMonths) {
     month++;
 
-    // Sort based on strategy
     let sortedLoans: typeof activeLoans;
 
     if (strategy === "hybrid" && !hybridSwitched) {
-      // Snowball until smallest loan is paid off
       sortedLoans = [...activeLoans]
         .filter((l) => l.outstanding > 0.5)
         .sort((a, b) => a.outstanding - b.outstanding);
@@ -114,7 +142,6 @@ function runStrategy(
         .filter((l) => l.outstanding > 0.5)
         .sort((a, b) => a.outstanding - b.outstanding);
     } else {
-      // Avalanche (or hybrid after switch)
       sortedLoans = [...activeLoans]
         .filter((l) => l.outstanding > 0.5)
         .sort((a, b) => b.annualRate - a.annualRate);
@@ -122,7 +149,6 @@ function runStrategy(
 
     let extraRemaining = extraBudget + carryForwardFreedEMI;
 
-    // Add one-time payment to the first month
     if (month === 1 && oneTimePayment > 0) {
       extraRemaining += oneTimePayment;
     }
@@ -136,7 +162,6 @@ function runStrategy(
       const interest = loan.outstanding * r;
       totalInterest += interest;
 
-      // Minimum payment
       let payment = Math.min(loan.emi, loan.outstanding + interest);
       let principal = payment - interest;
       const startingOutstanding = loan.outstanding;
@@ -170,7 +195,6 @@ function runStrategy(
       });
     }
 
-    // Check if hybrid should switch to avalanche
     if (strategy === "hybrid" && !hybridSwitched) {
       const justPaidOff = activeLoans.filter((l) => l.outstanding <= 0.5);
       if (justPaidOff.length > 0) {
@@ -178,10 +202,7 @@ function runStrategy(
       }
     }
 
-    const totalRemaining = activeLoans.reduce(
-      (sum, l) => sum + l.outstanding,
-      0
-    );
+    const totalRemaining = activeLoans.reduce((sum, l) => sum + l.outstanding, 0);
 
     schedule.push({
       month,
@@ -190,8 +211,7 @@ function runStrategy(
     });
   }
 
-  // Calculate savings vs minimum payment
-  const baseline = calculateMinimumPaymentBaseline(inputLoans);
+  const baseline = providedBaseline || calculateMinimumPaymentBaseline(inputLoans);
 
   const payoffDate = new Date();
   payoffDate.setMonth(payoffDate.getMonth() + month);
@@ -224,9 +244,9 @@ export function compareAllStrategies(
   baseline: { totalInterest: number; months: number };
 } {
   const baseline = calculateMinimumPaymentBaseline(loans);
-  const avalanche = calculateStrategy(loans, extraMonthlyBudget, "avalanche", oneTimePayment);
-  const snowball = calculateStrategy(loans, extraMonthlyBudget, "snowball", oneTimePayment);
-  const hybrid = calculateStrategy(loans, extraMonthlyBudget, "hybrid", oneTimePayment);
+  const avalanche = calculateStrategy(loans, extraMonthlyBudget, "avalanche", oneTimePayment, baseline);
+  const snowball = calculateStrategy(loans, extraMonthlyBudget, "snowball", oneTimePayment, baseline);
+  const hybrid = calculateStrategy(loans, extraMonthlyBudget, "hybrid", oneTimePayment, baseline);
 
   return { avalanche, snowball, hybrid, baseline };
 }

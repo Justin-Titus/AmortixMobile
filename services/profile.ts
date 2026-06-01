@@ -43,7 +43,7 @@ export async function getProfile(): Promise<FinancialProfile | null> {
   if (error) {
     if (error.code === 'PGRST116') return null; // Not found
     console.error('Failed to fetch profile:', error);
-    return null;
+    throw new Error(`Failed to fetch profile: ${error.message}`);
   }
   return data as FinancialProfile;
 }
@@ -94,7 +94,7 @@ export async function getHealthSnapshots(): Promise<HealthSnapshot[]> {
 
   if (error) {
     console.error('Failed to fetch snapshots:', error);
-    return [];
+    throw new Error(`Failed to fetch snapshots: ${error.message}`);
   }
   return (data as HealthSnapshot[]) ?? [];
 }
@@ -111,7 +111,7 @@ export async function getUserData() {
 
   if (error) {
     console.error('Failed to fetch user data:', error);
-    return null;
+    throw new Error(`Failed to fetch user data: ${error.message}`);
   }
   return data;
 }

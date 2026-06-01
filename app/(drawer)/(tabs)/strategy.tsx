@@ -23,6 +23,7 @@ import EMIOptimizerPanel from '@/components/strategy/EMIOptimizerPanel';
 import ExtraPaymentSimulator from '@/components/strategy/ExtraPaymentSimulator';
 import AmortizationTable from '@/components/strategy/AmortizationTable';
 import StrategyComparisonChart from '@/components/strategy/StrategyComparisonChart';
+import { Skeleton } from '@/components/ui/Skeleton';
 
 type StrategyType = 'avalanche' | 'snowball' | 'hybrid';
 
@@ -101,8 +102,37 @@ export default function StrategyScreen() {
 
   if (loading) {
     return (
-      <View style={[s.center, { backgroundColor: Colors.background }]}>
-        <Typography color="textMuted">Loading strategies...</Typography>
+      <View style={[s.safe, { backgroundColor: Colors.background }]}>
+        <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
+          <View style={[s.hero, { backgroundColor: Colors.surface, borderColor: Colors.borderLight }]}>
+            <Skeleton width={120} height={16} style={{ marginBottom: Spacing.sm }} />
+            <Skeleton width={200} height={32} style={{ marginBottom: 4 }} />
+            <Skeleton width="100%" height={16} />
+          </View>
+
+          <Card>
+            <Skeleton width={180} height={20} style={{ marginBottom: Spacing.md }} />
+            <Skeleton width="100%" height={40} style={{ marginBottom: Spacing.sm }} />
+            <Skeleton width="100%" height={40} />
+          </Card>
+
+          <View style={s.savingsRow}>
+            <Card style={s.savingsCard}>
+              <Skeleton width={100} height={12} style={{ marginBottom: 8 }} />
+              <Skeleton width={120} height={32} style={{ marginBottom: 4 }} />
+              <Skeleton width={60} height={12} />
+            </Card>
+            <Card style={s.savingsCard}>
+              <Skeleton width={100} height={12} style={{ marginBottom: 8 }} />
+              <Skeleton width={80} height={32} style={{ marginBottom: 4 }} />
+              <Skeleton width={60} height={12} />
+            </Card>
+          </View>
+
+          <Card>
+            <Skeleton width="100%" height={200} />
+          </Card>
+        </ScrollView>
       </View>
     );
   }
@@ -153,18 +183,12 @@ export default function StrategyScreen() {
           </Card>
         ) : (
           <>
-            <ExtraPaymentSimulator
-              extraPayment={extraPayment}
-              oneTimePayment={oneTimePayment}
-              onExtraPaymentChange={setExtraPayment}
-              onOneTimePaymentChange={setOneTimePayment}
-              currencyCode={currencyCode}
-            />
-
             <EMIOptimizerPanel
               loans={loans}
-              extraBudget={extraBudget}
-              onExtraBudgetChange={setExtraBudget}
+              extraBudget={extraPayment}
+              onExtraBudgetChange={setExtraPayment}
+              oneTimePayment={oneTimePayment}
+              onOneTimePaymentChange={setOneTimePayment}
               currencyCode={currencyCode}
             />
 

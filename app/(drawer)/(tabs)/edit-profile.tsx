@@ -10,6 +10,7 @@ import { Colors, Radius, Spacing, Shadows } from '@/constants/theme';
 import { Save, ArrowLeft } from 'lucide-react-native';
 import Typography from '@/components/ui/Typography';
 import { CURRENCIES, getCurrencyConfig } from '@/lib/calculations';
+import { Skeleton } from '@/components/ui/Skeleton';
 
 const employmentTypes = ['SALARIED', 'SELF_EMPLOYED', 'BUSINESS_OWNER', 'STUDENT', 'OTHER'];
 const creditScoreRanges = ['800+', '750-800', '700-750', '650-700', 'Below-650'];
@@ -67,7 +68,38 @@ export default function EditProfileScreen() {
     setSubmitting(false);
   };
 
-  if (loading) return null;
+  if (loading) {
+    return (
+      <View style={{ flex: 1, backgroundColor: Colors.background }}>
+        <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
+          <View style={s.hero}>
+            <Skeleton width={180} height={32} style={{ marginBottom: Spacing.sm }} />
+            <Skeleton width="100%" height={16} />
+          </View>
+          
+          {[1, 2].map(i => (
+            <View key={i} style={s.gap}>
+              <Skeleton width={120} height={14} style={{ marginBottom: Spacing.sm }} />
+              <Skeleton width="100%" height={52} borderRadius={Radius.button} />
+            </View>
+          ))}
+          
+          {[1, 2, 3].map(i => (
+            <View key={`chips-${i}`} style={{ marginBottom: Spacing.lg }}>
+              <Skeleton width={120} height={14} style={{ marginBottom: Spacing.sm }} />
+              <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
+                <Skeleton width={80} height={36} borderRadius={18} />
+                <Skeleton width={100} height={36} borderRadius={18} />
+                <Skeleton width={90} height={36} borderRadius={18} />
+              </View>
+            </View>
+          ))}
+          
+          <Skeleton width="100%" height={52} borderRadius={Radius.button} style={{ marginTop: Spacing.lg }} />
+        </ScrollView>
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView 

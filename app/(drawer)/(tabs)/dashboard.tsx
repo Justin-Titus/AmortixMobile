@@ -26,6 +26,7 @@ import {
 import AffordabilityGauge from '@/components/dashboard/AffordabilityGauge';
 import DebtDistribution from '@/components/dashboard/DebtDistribution';
 import HealthTrendChart from '@/components/analysis/HealthTrendChart';
+import { Skeleton } from '@/components/ui/Skeleton';
 
 const loanColors = ['#1E3A5F', '#059669', '#F59E0B', '#378ADD', '#DC2626', '#34D399'];
 
@@ -171,9 +172,55 @@ export default function DashboardScreen() {
 
   if (loading) {
     return (
-      <View style={s.loadingBox}>
-        <Typography color="slate">Loading dashboard...</Typography>
-      </View>
+      <ScrollView style={s.scroll} contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
+        <View style={s.hero}>
+          <Skeleton width={120} height={16} style={{ marginBottom: Spacing.md }} />
+          <Skeleton width={200} height={32} style={{ marginBottom: Spacing.sm }} />
+          <Skeleton width="100%" height={44} style={{ marginBottom: Spacing.lg }} />
+          
+          <View style={s.statsRow}>
+            {[1, 2, 3].map(i => (
+              <View key={i} style={s.statItem}>
+                <Skeleton width={60} height={24} style={{ marginBottom: 4 }} />
+                <Skeleton width={80} height={12} />
+              </View>
+            ))}
+          </View>
+          
+          <View style={s.heroActions}>
+            <Skeleton width={120} height={44} borderRadius={Radius.button} />
+            <Skeleton width={120} height={44} borderRadius={Radius.button} />
+          </View>
+        </View>
+
+        <View style={s.metricsGrid}>
+          {[1, 2, 3, 4].map(i => (
+            <Card key={i} style={[s.metricHalf, { padding: Spacing.md }]}>
+              <Skeleton width={80} height={12} style={{ marginBottom: 8 }} />
+              <Skeleton width="80%" height={24} style={{ marginBottom: 4 }} />
+              <Skeleton width={100} height={10} />
+            </Card>
+          ))}
+        </View>
+
+        <Card>
+          <Skeleton width={120} height={20} style={{ marginBottom: 6 }} />
+          <Skeleton width={200} height={14} style={{ marginBottom: Spacing.md }} />
+          {[1, 2].map(i => (
+            <View key={i} style={s.loanRow}>
+              <View style={s.loanHeader}>
+                <Skeleton width={120} height={16} />
+                <Skeleton width={40} height={20} borderRadius={10} />
+              </View>
+              <View style={s.loanMeta}>
+                <Skeleton width={80} height={12} />
+                <Skeleton width={80} height={12} />
+              </View>
+              <Skeleton width="100%" height={4} borderRadius={2} />
+            </View>
+          ))}
+        </Card>
+      </ScrollView>
     );
   }
 
@@ -341,11 +388,55 @@ export default function DashboardScreen() {
       {hasLoans && (
         <View style={s.analyticsRow}>
           <Card style={s.affordabilityCard}>
-            <Typography variant="body" weight="bold" color="navy" fontFamily="heading" style={s.sectionTitle}>
-              Affordability
-            </Typography>
+            <View style={{ marginBottom: Spacing.sm }}>
+              <Typography variant="body" weight="bold" color="navy" fontFamily="heading">
+                Affordability score
+              </Typography>
+              <Typography variant="xs" color="slate">
+                A quick read on repayment sustainability.
+              </Typography>
+            </View>
             {affordability ? (
-              <AffordabilityGauge score={affordability.score} />
+              <>
+                <AffordabilityGauge score={affordability.score} />
+                <View style={s.affordabilityDetails}>
+                  <View style={s.detailRow}>
+                    <Typography variant="xs" color="slate">EMI to debt ratio</Typography>
+                    <Typography variant="xs" weight="medium" color="slateDark" fontFamily="mono">
+                      {((totalEMI / Math.max(totalOutstanding, 1)) * 100).toFixed(2)}%
+                    </Typography>
+                  </View>
+                  <View style={s.detailRow}>
+                    <Typography variant="xs" color="slate">Average interest rate</Typography>
+                    <Typography variant="xs" weight="medium" color="amber" fontFamily="mono">
+                      {avgRate.toFixed(2)}%
+                    </Typography>
+                  </View>
+                  <View style={s.detailRow}>
+                    <Typography variant="xs" color="slate">Current monthly burn</Typography>
+                    <Typography variant="xs" weight="medium" color="slateDark" fontFamily="mono">
+                      {formatCurrency(totalEMI, currencyCode)}
+                    </Typography>
+                  </View>
+                  <View style={s.detailRow}>
+                    <Typography variant="xs" color="slate">Estimated payoff horizon</Typography>
+                    <Typography variant="xs" weight="medium" color="emerald" fontFamily="mono">
+                      {projectedMonths || 0} months
+                    </Typography>
+                  </View>
+                  <View style={[s.detailRow, { borderBottomWidth: 0, paddingBottom: 0 }]}>
+                    <Typography variant="xs" color="slate">Risk signal</Typography>
+                    <Typography 
+                      variant="xs" 
+                      weight="semiBold" 
+                      color={affordability.score >= 70 ? 'emerald' : 'red'}
+                      fontFamily="mono"
+                    >
+                      {affordability.score >= 70 ? 'Stable' : 'Monitor'}
+                    </Typography>
+                  </View>
+                </View>
+              </>
             ) : (
               <View style={s.emptyGauge}>
                 <Typography variant="xs" color="slate" style={{ textAlign: 'center' }}>
@@ -464,5 +555,19 @@ const s = StyleSheet.create({
   distributionCard: { flex: 1 },
   sectionTitle: { marginBottom: Spacing.sm },
   emptyGauge: { height: 90, alignItems: 'center', justifyContent: 'center', borderStyle: 'dashed', borderWidth: 1, borderColor: Colors.borderMid, borderRadius: Radius.lg },
+  affordabilityDetails: {
+    marginTop: Spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
+    paddingTop: Spacing.sm,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: Spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
 });
 

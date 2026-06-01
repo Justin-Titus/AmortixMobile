@@ -168,6 +168,20 @@ export default function RegisterScreen() {
           containerStyle={styles.submitContainer}
         />
 
+        <View style={styles.termsFooter}>
+          <Text style={styles.termsText}>
+            By signing up, you agree to our{' '}
+          </Text>
+          <TouchableOpacity onPress={() => router.push('/(drawer)/(tabs)/terms')}>
+            <Text style={styles.termsLink}>Terms of Service</Text>
+          </TouchableOpacity>
+          <Text style={styles.termsText}> and </Text>
+          <TouchableOpacity onPress={() => router.push('/(drawer)/(tabs)/privacy')}>
+            <Text style={styles.termsLink}>Privacy Policy</Text>
+          </TouchableOpacity>
+          <Text style={styles.termsText}>.</Text>
+        </View>
+
         <View style={styles.footer}>
           <Text style={styles.footerText}>Already have an account? </Text>
           <TouchableOpacity onPress={() => router.push('/(auth)/login')}>
@@ -253,6 +267,26 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.md,
     color: Colors.emerald,
     fontWeight: '600',
+    lineHeight: 20,
+  },
+  termsFooter: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: Spacing.xl,
+    paddingHorizontal: Spacing.sm,
+  },
+  termsText: {
+    fontSize: FontSizes.sm,
+    color: Colors.slate,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  termsLink: {
+    fontSize: FontSizes.sm,
+    color: Colors.emerald,
+    textAlign: 'center',
     lineHeight: 20,
   },
 });

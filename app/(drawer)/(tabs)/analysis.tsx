@@ -19,6 +19,7 @@ import OfflineBanner from '@/components/ui/OfflineBanner';
 import { formatCurrency } from '@/lib/calculations';
 import { TrendingUp } from 'lucide-react-native';
 import InterestLeakDetector from '@/components/analysis/InterestLeakDetector';
+import { Skeleton } from '@/components/ui/Skeleton';
 
 export default function AnalysisScreen() {
   const fetcher = useCallback(async () => {
@@ -84,9 +85,33 @@ export default function AnalysisScreen() {
 
   if (loading) {
     return (
-      <View style={[s.center, { backgroundColor: Colors.background }]}>
-        <Typography color="textMuted">Loading analysis...</Typography>
-      </View>
+      <ScrollView style={{ backgroundColor: Colors.background }} contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
+        <View style={[s.hero, { backgroundColor: Colors.surface, borderColor: Colors.borderLight }]}>
+          <Skeleton width={100} height={16} style={{ marginBottom: Spacing.sm }} />
+          <Skeleton width={180} height={32} style={{ marginBottom: 4 }} />
+          <Skeleton width={250} height={16} />
+        </View>
+
+        <View style={s.metricsGrid}>
+          {[1, 2, 3, 4].map(i => (
+            <Card key={i} style={[s.half, { padding: Spacing.md }]}>
+              <Skeleton width={80} height={12} style={{ marginBottom: 8 }} />
+              <Skeleton width="80%" height={24} style={{ marginBottom: 4 }} />
+              <Skeleton width={100} height={10} />
+            </Card>
+          ))}
+        </View>
+
+        <Card>
+          <Skeleton width={150} height={24} style={{ marginBottom: Spacing.md }} />
+          {[1, 2, 3, 4, 5].map(i => (
+            <View key={i} style={s.profileRow}>
+              <Skeleton width={120} height={16} />
+              <Skeleton width={80} height={16} />
+            </View>
+          ))}
+        </Card>
+      </ScrollView>
     );
   }
 

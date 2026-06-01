@@ -10,6 +10,7 @@ import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
 import Typography from '@/components/ui/Typography';
 import { useRouter } from 'expo-router';
+import { Skeleton } from '@/components/ui/Skeleton';
 
 export default function InsightsScreen() {
   const router = useRouter();
@@ -19,9 +20,13 @@ export default function InsightsScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const loadData = useCallback(async () => {
-    const [loansData, profileData] = await Promise.all([getLoans(), getProfile()]);
-    setLoans(loansData);
-    setProfile(profileData);
+    try {
+      const [loansData, profileData] = await Promise.all([getLoans(), getProfile()]);
+      setLoans(loansData);
+      setProfile(profileData);
+    } catch (err) {
+      console.error('Failed to load insights data:', err);
+    }
   }, []);
 
   useEffect(() => {
@@ -101,9 +106,22 @@ export default function InsightsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.loadingBox}>
-        <Typography color="slate">Analyzing portfolio...</Typography>
-      </View>
+      <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.hero}>
+          <Skeleton width={130} height={16} style={{ marginBottom: Spacing.sm }} />
+          <Skeleton width={180} height={32} style={{ marginBottom: Spacing.sm }} />
+          <Skeleton width="100%" height={20} style={{ marginBottom: Spacing.lg }} />
+          <View style={styles.metricsGrid}>
+            <Skeleton width="48%" height={60} borderRadius={Radius.card} />
+            <Skeleton width="48%" height={60} borderRadius={Radius.card} />
+          </View>
+        </View>
+
+        <Card style={{ marginBottom: Spacing.md }}>
+          <Skeleton width={150} height={20} style={{ marginBottom: Spacing.md }} />
+          <Skeleton width="100%" height={80} />
+        </Card>
+      </ScrollView>
     );
   }
 

@@ -12,6 +12,7 @@ import { Colors, Radius, Spacing, Shadows } from '@/constants/theme';
 import { calculateEMI, calculateTenure, CURRENCIES, getCurrencyConfig } from '@/lib/calculations';
 import { Save, Plus, ArrowLeft, Calendar as CalendarIcon } from 'lucide-react-native';
 import Typography from '@/components/ui/Typography';
+import { Skeleton } from '@/components/ui/Skeleton';
 
 const loanTypes = ['HOME', 'EDUCATION', 'PERSONAL', 'VEHICLE', 'BUSINESS', 'GOLD', 'OTHER'];
 const rateTypes = ['FIXED', 'FLOATING'];
@@ -147,7 +148,29 @@ export default function AddLoanScreen() {
     setSubmitting(false);
   };
 
-  if (loading) return null;
+  if (loading) {
+    return (
+      <View style={s.container}>
+        <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
+          <Skeleton width={80} height={20} style={{ marginBottom: Spacing.md }} />
+          
+          <View style={s.hero}>
+            <Skeleton width={150} height={32} style={{ marginBottom: Spacing.sm }} />
+            <Skeleton width="100%" height={16} />
+          </View>
+          
+          {[1, 2, 3, 4, 5, 6].map(i => (
+            <View key={i} style={s.gap}>
+              <Skeleton width={120} height={14} style={{ marginBottom: Spacing.sm }} />
+              <Skeleton width="100%" height={52} borderRadius={Radius.button} />
+            </View>
+          ))}
+          
+          <Skeleton width="100%" height={52} borderRadius={Radius.button} style={{ marginTop: Spacing.lg }} />
+        </ScrollView>
+      </View>
+    );
+  }
 
   const currentConfig = getCurrencyConfig(currency);
 
@@ -158,10 +181,6 @@ export default function AddLoanScreen() {
       style={s.container}
     >
       <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-        <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
-          <ArrowLeft size={16} color={Colors.slate} />
-          <Typography weight="medium" color="slate">Back</Typography>
-        </TouchableOpacity>
 
         <View style={s.hero}>
           <Typography variant="h3" weight="bold" color="navy" fontFamily="heading">

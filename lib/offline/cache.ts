@@ -7,6 +7,7 @@ const KEY_PROFILE = '@amortix_cache_profile';
 const KEY_SNAPSHOTS = '@amortix_cache_snapshots';
 const KEY_USERDATA = '@amortix_cache_userdata';
 const KEY_LAST_SYNC = '@amortix_cache_last_sync';
+const KEY_LOANS_WITH_PAYMENTS = '@amortix_cache_loans_with_payments';
 
 export async function saveOfflineLoans(loans: LoanRecord[]) {
   try {
@@ -23,6 +24,25 @@ export async function getOfflineLoans(): Promise<LoanRecord[]> {
     return cached ? JSON.parse(cached) : [];
   } catch (e) {
     console.error('Failed to read offline loans', e);
+    return [];
+  }
+}
+
+export async function saveOfflineLoansWithPayments(loans: LoanRecord[]) {
+  try {
+    await AsyncStorage.setItem(KEY_LOANS_WITH_PAYMENTS, JSON.stringify(loans));
+    await updateLastSync();
+  } catch (e) {
+    console.error('Failed to save offline loans with payments', e);
+  }
+}
+
+export async function getOfflineLoansWithPayments(): Promise<LoanRecord[]> {
+  try {
+    const cached = await AsyncStorage.getItem(KEY_LOANS_WITH_PAYMENTS);
+    return cached ? JSON.parse(cached) : [];
+  } catch (e) {
+    console.error('Failed to read offline loans with payments', e);
     return [];
   }
 }
@@ -102,7 +122,7 @@ export async function getLastSyncTime(): Promise<string | null> {
 
 export async function clearOfflineCache() {
   try {
-    await AsyncStorage.multiRemove([KEY_LOANS, KEY_PROFILE, KEY_SNAPSHOTS, KEY_USERDATA, KEY_LAST_SYNC]);
+    await AsyncStorage.multiRemove([KEY_LOANS, KEY_PROFILE, KEY_SNAPSHOTS, KEY_USERDATA, KEY_LAST_SYNC, KEY_LOANS_WITH_PAYMENTS]);
   } catch (e) {
     console.error('Failed to clear offline cache', e);
   }

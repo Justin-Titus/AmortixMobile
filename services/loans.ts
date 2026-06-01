@@ -76,7 +76,7 @@ export async function getLoans(): Promise<LoanRecord[]> {
 
   if (error) {
     console.error('Failed to fetch loans:', error);
-    return [];
+    throw new Error(`Failed to fetch loans: ${error.message}`);
   }
   return (data as LoanRecord[]) ?? [];
 }
@@ -87,17 +87,23 @@ export async function getLoan(id: string): Promise<LoanRecord | null> {
 
   const { data, error } = await supabase
     .from('Loan')
-    .select('*, payments:Payment(*)')
+    .select('*')
     .eq('id', id)
     .eq('userId', user.id)
-    .order('paymentDate', { foreignTable: 'Payment', ascending: false })
     .single();
 
   if (error) {
     console.error('Failed to fetch loan:', error);
-    return null;
+    throw new Error(`Failed to fetch loan: ${error.message}`);
   }
-  return data as LoanRecord;
+
+  const { data: payments } = await supabase
+    .from('Payment')
+    .select('*')
+    .eq('loanId', id)
+    .order('paymentDate', { ascending: false });
+
+  return { ...data, payments: payments || [] } as LoanRecord;
 }
 
 export async function createLoan(input: LoanInput) {
@@ -238,7 +244,7 @@ export async function getPayments(loanId: string) {
 
   if (error) {
     console.error('Failed to fetch payments:', error);
-    return [];
+    throw new Error(`Failed to fetch payments: ${error.message}`);
   }
   return data ?? [];
 }
@@ -247,14 +253,27 @@ export async function getLoansWithPayments(): Promise<LoanRecord[]> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
 
-  const { data, error } = await supabase
+  const { data: loans, error } = await supabase
     .from('Loan')
-    .select('*, payments:Payment(*)')
-    .eq('userId', user.id);
+    .select('*')
+    .eq('userId', user.id)
+    .order('createdAt', { ascending: false });
 
   if (error) {
-    console.error('Failed to fetch loans with payments:', error);
-    return [];
+    console.error('Failed to fetch loans:', error);
+    throw new Error(`Failed to fetch loans: ${error.message}`);
   }
-  return (data as LoanRecord[]) ?? [];
+
+  const loansWithPayments = await Promise.all(
+    (loans || []).map(async (loan) => {
+      const { data: payments } = await supabase
+        .from('Payment')
+        .select('*')
+        .eq('loanId', loan.id)
+        .order('paymentDate', { ascending: false });
+      return { ...loan, payments: payments || [] };
+    })
+  );
+
+  return loansWithPayments as LoanRecord[];
 }

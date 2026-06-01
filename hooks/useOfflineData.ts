@@ -22,6 +22,22 @@ export function useOfflineData<T>({ fetcher, cacher, reader }: UseOfflineDataOpt
       setLoading(true);
     }
 
+    let initialCacheLoaded = false;
+    if (!isRefresh) {
+      try {
+        const cachedData = await reader();
+        const syncTime = await getLastSyncTime();
+        if (cachedData && syncTime) {
+          setData(cachedData);
+          initialCacheLoaded = true;
+          setLastSync(syncTime);
+          setLoading(false);
+        }
+      } catch (e) {
+        console.error('Failed to pre-load cached data', e);
+      }
+    }
+
     try {
       if (isOnline) {
         // Fetch online data
@@ -40,11 +56,20 @@ export function useOfflineData<T>({ fetcher, cacher, reader }: UseOfflineDataOpt
     } catch (e) {
       console.error('Failed to load offline-enabled data', e);
       // Fallback to cache if error occurs on fetch
+      if (!initialCacheLoaded) {
+        try {
+          const cachedData = await reader();
+          setData(cachedData);
+        } catch (cacheErr) {
+          console.error('Failed to load from cache fallback', cacheErr);
+        }
+      }
+      // Ensure we still load the last sync time when offline/error
       try {
-        const cachedData = await reader();
-        setData(cachedData);
-      } catch (cacheErr) {
-        console.error('Failed to load from cache fallback', cacheErr);
+        const syncTime = await getLastSyncTime();
+        setLastSync(syncTime);
+      } catch (syncErr) {
+        console.error('Failed to get sync time in catch block', syncErr);
       }
     } finally {
       setLoading(false);

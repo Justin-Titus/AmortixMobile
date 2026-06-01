@@ -29,6 +29,8 @@ export default function DrawerLayout() {
       drawerContent={CustomDrawerContent}
       screenOptions={{
         headerShown: false,
+        drawerType: 'front',
+        overlayColor: 'rgba(15, 23, 42, 0.6)',
         drawerStyle: {
           width: 280,
         },

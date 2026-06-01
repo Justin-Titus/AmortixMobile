@@ -18,14 +18,17 @@ export function generateAmortizationSchedule(
   principal: number,
   annualRate: number,
   tenureMonths: number,
-  extraPayment: number = 0
+  extraPayment: number = 0,
+  fixedEmi?: number
 ): ScheduleEntry[] {
   if (principal <= 0 || tenureMonths <= 0 || annualRate < 0 || extraPayment < 0) return [];
 
   const r = annualRate / 12 / 100;
   let emi: number;
 
-  if (annualRate === 0) {
+  if (fixedEmi && fixedEmi > 0) {
+    emi = fixedEmi;
+  } else if (annualRate === 0) {
     emi = principal / tenureMonths;
   } else {
     emi =
@@ -36,7 +39,8 @@ export function generateAmortizationSchedule(
   const schedule: ScheduleEntry[] = [];
   let outstanding = principal;
 
-  for (let month = 1; month <= tenureMonths && outstanding > 0.5; month++) {
+  const maxMonths = fixedEmi ? 1200 : tenureMonths; // Safety cap if fixedEmi is provided
+  for (let month = 1; month <= maxMonths && outstanding > 0.5; month++) {
     const interestComponent = outstanding * r;
     let principalComponent = emi - interestComponent + extraPayment;
 

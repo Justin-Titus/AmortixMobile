@@ -18,6 +18,7 @@ import {
 import OfflineBanner from '@/components/ui/OfflineBanner';
 import { formatCurrency } from '@/lib/calculations';
 import { Info, Plus, ExternalLink } from 'lucide-react-native';
+import { Skeleton } from '@/components/ui/Skeleton';
 
 export default function LoansScreen() {
   const router = useRouter();
@@ -62,9 +63,43 @@ export default function LoansScreen() {
 
   if (loading) {
     return (
-      <View style={s.center}>
-        <Typography color="slate">Loading loans...</Typography>
-      </View>
+      <ScrollView style={s.container} contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
+        <View style={s.hero}>
+          <Skeleton width={120} height={16} style={{ marginBottom: Spacing.sm }} />
+          <Skeleton width={180} height={32} style={{ marginBottom: Spacing.sm }} />
+          <Skeleton width="100%" height={40} style={{ marginBottom: Spacing.lg }} />
+          <Skeleton width={120} height={40} borderRadius={Radius.button} />
+        </View>
+
+        <View style={s.metricsGrid}>
+          {[1, 2, 3, 4].map(i => (
+            <Card key={i} style={[s.metricHalf, { padding: Spacing.md }]}>
+              <Skeleton width={80} height={12} style={{ marginBottom: 8 }} />
+              <Skeleton width="80%" height={24} style={{ marginBottom: 4 }} />
+            </Card>
+          ))}
+        </View>
+
+        <View style={s.loanGrid}>
+          {[1, 2, 3].map(i => (
+            <Card key={i} style={s.loanCard}>
+              <View style={s.loanTop}>
+                <View style={s.loanNameCol}>
+                  <Skeleton width={60} height={20} borderRadius={10} style={{ marginBottom: 8 }} />
+                  <Skeleton width={150} height={24} style={{ marginBottom: 4 }} />
+                  <Skeleton width={100} height={12} />
+                </View>
+              </View>
+              <Skeleton width="100%" height={6} borderRadius={3} style={{ marginBottom: Spacing.base }} />
+              <View style={s.loanStats}>
+                <View><Skeleton width={60} height={12} style={{ marginBottom: 4 }}/><Skeleton width={80} height={20} /></View>
+                <View><Skeleton width={40} height={12} style={{ marginBottom: 4 }}/><Skeleton width={60} height={20} /></View>
+                <View><Skeleton width={40} height={12} style={{ marginBottom: 4 }}/><Skeleton width={60} height={20} /></View>
+              </View>
+            </Card>
+          ))}
+        </View>
+      </ScrollView>
     );
   }
 

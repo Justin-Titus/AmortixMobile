@@ -14,6 +14,7 @@ import {
   Mail, Briefcase, Shield, PiggyBank, LogOut, ChevronRight,
   LifeBuoy, FileText, Lock, HelpCircle, Coins,
 } from 'lucide-react-native';
+import { Skeleton } from '@/components/ui/Skeleton';
 
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
@@ -31,6 +32,47 @@ export default function ProfileScreen() {
 
   useEffect(() => { load().finally(() => setLoading(false)); }, [load]);
   const onRefresh = async () => { setRefreshing(true); await load(); setRefreshing(false); };
+
+  if (loading) {
+    return (
+      <ScrollView style={s.container} contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
+        <Card style={s.profileCard}>
+          <Skeleton width={72} height={72} borderRadius={24} style={{ marginBottom: Spacing.base }} />
+          <Skeleton width={150} height={28} style={{ marginBottom: 4 }} />
+          <Skeleton width={200} height={16} />
+        </Card>
+
+        <Card>
+          <View style={s.sectionHeader}>
+            <Skeleton width={120} height={20} />
+            <Skeleton width={80} height={16} />
+          </View>
+          {[1, 2, 3, 4, 5, 6].map(i => (
+            <View key={i} style={s.profileRow}>
+              <View style={s.profileRowLeft}>
+                <Skeleton width={16} height={16} />
+                <Skeleton width={100} height={16} />
+              </View>
+              <Skeleton width={80} height={16} />
+            </View>
+          ))}
+        </Card>
+
+        <Card>
+          <Skeleton width={150} height={24} style={{ marginBottom: Spacing.md }} />
+          {[1, 2, 3, 4].map(i => (
+            <View key={i} style={s.linkRow}>
+              <View style={s.linkRowLeft}>
+                <Skeleton width={18} height={18} />
+                <Skeleton width={120} height={18} />
+              </View>
+              <Skeleton width={16} height={16} />
+            </View>
+          ))}
+        </Card>
+      </ScrollView>
+    );
+  }
 
   const handleSignOut = () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [

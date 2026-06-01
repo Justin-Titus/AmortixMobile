@@ -1,10 +1,10 @@
 import React from 'react';
-import { View, StyleSheet, type ViewStyle } from 'react-native';
+import { View, StyleSheet, type ViewStyle, type StyleProp } from 'react-native';
 import { Colors, Radius, Shadows, Spacing } from '@/constants/theme';
 
 type CardProps = {
   children: React.ReactNode;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
   variant?: 'default' | 'dark' | 'glass' | 'metric';
 };
 

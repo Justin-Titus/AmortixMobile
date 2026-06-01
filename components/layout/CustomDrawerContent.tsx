@@ -1,7 +1,9 @@
 import React from 'react';
 import { View, StyleSheet, Image, Pressable, ScrollView } from 'react-native';
 import { DrawerContentScrollView } from '@react-navigation/drawer';
-import { useRouter, usePathname } from 'expo-router';
+import { useRouter, usePathname, useNavigation } from 'expo-router';
+import { DrawerActions } from '@react-navigation/native';
+import { InteractionManager } from 'react-native';
 import { Spacing, Radius } from '@/constants/theme';
 import Typography from '@/components/ui/Typography';
 import {
@@ -34,6 +36,7 @@ const toolsNavItems = [
 export default function CustomDrawerContent(props: any) {
   const router = useRouter();
   const pathname = usePathname();
+  const navigation = useNavigation();
 
   const renderNavItem = (item: any) => {
     const itemBaseName = item.href.split('/').pop() as string;
@@ -45,7 +48,10 @@ export default function CustomDrawerContent(props: any) {
         key={item.href}
         style={[styles.navItem, isActive && styles.navItemActive]}
         onPress={() => {
-          router.push(item.href);
+          navigation.dispatch(DrawerActions.closeDrawer());
+          InteractionManager.runAfterInteractions(() => {
+            router.push(item.href);
+          });
         }}
       >
         {isActive && (

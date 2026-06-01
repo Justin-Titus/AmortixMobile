@@ -15,6 +15,7 @@ import Typography from '@/components/ui/Typography';
 import { Colors, Spacing, Radius, Shadows } from '@/constants/theme';
 import { Trash2, Edit3 } from 'lucide-react-native';
 import { LogPaymentCard } from '@/components/loans/LogPaymentCard';
+import { Skeleton } from '@/components/ui/Skeleton';
 
 export default function LoanDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -28,16 +29,20 @@ export default function LoanDetailScreen() {
 
   const loadData = async () => {
     if (id) {
-      const [loanData, profileData, allLoans] = await Promise.all([
-        getLoan(id),
-        getProfile(),
-        getLoans()
-      ]);
-      setLoan(loanData);
-      setProfile(profileData);
-      if (allLoans) {
-        setTotalEMI(allLoans.reduce((sum, l) => sum + l.emiAmount, 0));
-        setLoansCount(allLoans.length);
+      try {
+        const [loanData, profileData, allLoans] = await Promise.all([
+          getLoan(id),
+          getProfile(),
+          getLoans()
+        ]);
+        setLoan(loanData);
+        setProfile(profileData);
+        if (allLoans) {
+          setTotalEMI(allLoans.reduce((sum, l) => sum + l.emiAmount, 0));
+          setLoansCount(allLoans.length);
+        }
+      } catch (err) {
+        console.error('Failed to load loan details:', err);
       }
     }
     setLoading(false);
@@ -105,9 +110,59 @@ export default function LoanDetailScreen() {
 
   if (loading) {
     return (
-      <View style={s.center}>
-        <Typography color="slate">Loading...</Typography>
-      </View>
+      <ScrollView style={s.container} contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
+        <View style={s.headerActions}>
+           <Skeleton width="48%" height={40} borderRadius={Radius.md} />
+           <Skeleton width="48%" height={40} borderRadius={Radius.md} />
+        </View>
+
+        <Card style={{ marginBottom: Spacing.md }}>
+          <View style={s.topRow}>
+            <Skeleton width={80} height={24} borderRadius={12} style={{ marginBottom: Spacing.sm }} />
+            <Skeleton width={200} height={32} style={{ marginBottom: 4 }} />
+            <Skeleton width={120} height={16} style={{ marginBottom: Spacing.md }} />
+            <Skeleton width={100} height={24} borderRadius={12} />
+          </View>
+          <View style={s.progressSection}>
+            <View style={s.progressRow}>
+              <Skeleton width={60} height={12} />
+              <Skeleton width={80} height={12} />
+            </View>
+            <Skeleton width="100%" height={8} borderRadius={4} />
+          </View>
+        </Card>
+
+        <Card style={{ marginBottom: Spacing.md }}>
+           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.md }}>
+             <Skeleton width={24} height={24} borderRadius={12} style={{ marginRight: Spacing.sm }} />
+             <Skeleton width={150} height={20} />
+           </View>
+           <Skeleton width="100%" height={60} borderRadius={Radius.sm} style={{ marginBottom: Spacing.sm }} />
+           <Skeleton width="80%" height={14} />
+        </Card>
+
+        <Card style={{ marginBottom: Spacing.md }}>
+           <View style={{ flexDirection: 'row', gap: 2, backgroundColor: Colors.frost, padding: 4, borderRadius: Radius.full, marginBottom: Spacing.md }}>
+              <Skeleton width="33%" height={32} borderRadius={16} />
+              <Skeleton width="33%" height={32} borderRadius={16} />
+              <Skeleton width="33%" height={32} borderRadius={16} />
+           </View>
+           <Skeleton width={120} height={14} style={{ marginBottom: Spacing.xs }} />
+           <Skeleton width="100%" height={48} borderRadius={Radius.sm} style={{ marginBottom: Spacing.md }} />
+           
+           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, marginBottom: Spacing.lg }}>
+             {[1, 2, 3, 4].map(i => (
+               <View key={i} style={{ flex: 1, minWidth: '46%', padding: Spacing.sm, backgroundColor: Colors.frost, borderRadius: Radius.md }}>
+                 <Skeleton width={60} height={12} style={{ marginBottom: 4 }} />
+                 <Skeleton width={80} height={20} />
+               </View>
+             ))}
+           </View>
+
+           <Skeleton width="100%" height={120} borderRadius={Radius.md} style={{ marginBottom: Spacing.md }} />
+           <Skeleton width="100%" height={40} />
+        </Card>
+      </ScrollView>
     );
   }
 
@@ -147,7 +202,7 @@ export default function LoanDetailScreen() {
       <Card>
         <View style={s.topRow}>
           <View>
-            <Badge text={loan.loanType} variant="slate" />
+            <Badge text={loan.loanType} variant="slate" style={{ alignSelf: 'flex-start' }} />
             <Typography variant="h2" weight="bold" color="navy" fontFamily="heading" style={s.loanName}>
               {loan.name}
             </Typography>

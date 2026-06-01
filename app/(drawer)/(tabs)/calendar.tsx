@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 import { Colors, Spacing, Radius, Shadows } from '@/constants/theme';
 import { CalendarDays, ChevronLeft, ChevronRight, Info } from 'lucide-react-native';
 import { getLoansWithPayments } from '@/services/loans';
@@ -7,48 +8,75 @@ import { getProfile } from '@/services/profile';
 import { buildCalendarData, formatDateKey, RawLoan, formatCurrency, getCurrencyConfig } from '@/lib/calculations';
 import { EmptyState } from '@/components/ui/EmptyState';
 import Typography from '@/components/ui/Typography';
+import { useOfflineData } from '@/hooks/useOfflineData';
+import { 
+  saveOfflineLoansWithPayments, getOfflineLoansWithPayments,
+  saveOfflineProfile, getOfflineProfile
+} from '@/lib/offline/cache';
+import OfflineBanner from '@/components/ui/OfflineBanner';
+import { Skeleton } from '@/components/ui/Skeleton';
 
 export default function CalendarScreen() {
-  const [loans, setLoans] = useState<any[]>([]);
-  const [currencyCode, setCurrencyCode] = useState('INR');
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
 
   const today = useMemo(() => new Date(), []);
   const year = currentMonth.getFullYear();
   const month = currentMonth.getMonth();
 
-  const loadData = useCallback(async () => {
-    const [data, profile] = await Promise.all([getLoansWithPayments(), getProfile()]);
-    if (profile?.currency) {
-      setCurrencyCode(profile.currency);
-    }
-    const transformed: RawLoan[] = data.map(l => ({
+  const fetcher = useCallback(async () => {
+    const [loansData, profileData] = await Promise.all([
+      getLoansWithPayments(),
+      getProfile()
+    ]);
+    return { loans: loansData, profile: profileData };
+  }, []);
+
+  const cacher = useCallback(async (data: { loans: any[], profile: any }) => {
+    await saveOfflineLoansWithPayments(data.loans);
+    if (data.profile) await saveOfflineProfile(data.profile);
+  }, []);
+
+  const reader = useCallback(async () => {
+    const loans = await getOfflineLoansWithPayments();
+    const profile = await getOfflineProfile();
+    return { loans, profile };
+  }, []);
+
+  const { data, loading, refreshing, isOffline, lastSync, refresh } = useOfflineData({
+    fetcher,
+    cacher,
+    reader
+  });
+
+  useFocusEffect(
+    useCallback(() => {
+      refresh();
+    }, [refresh])
+  );
+
+  const formatDateToYMD = (dateStr: string | null | undefined): string | null => {
+    if (!dateStr) return null;
+    return dateStr.substring(0, 10);
+  };
+
+  const loans = useMemo(() => {
+    const rawLoans = data?.loans ?? [];
+    return rawLoans.map(l => ({
       id: l.id,
       name: l.name,
       emiAmount: l.emiAmount,
-      nextEmiDate: l.nextEmiDate,
-      startDate: l.startDate,
+      nextEmiDate: formatDateToYMD(l.nextEmiDate),
+      startDate: formatDateToYMD(l.startDate) ?? new Date().toISOString().substring(0, 10),
       payments: (l.payments || []).map(p => ({
         amount: p.amount,
-        date: p.paymentDate,
+        date: formatDateToYMD(p.paymentDate) ?? new Date().toISOString().substring(0, 10),
         type: p.type
       }))
     }));
-    setLoans(transformed);
-  }, []);
+  }, [data]);
 
-  useEffect(() => {
-    loadData().finally(() => setLoading(false));
-  }, [loadData]);
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await loadData();
-    setRefreshing(false);
-  };
+  const currencyCode = data?.profile?.currency ?? 'INR';
 
   const { days, dueIn30, totalDueIn30 } = useMemo(
     () => buildCalendarData(loans, currentMonth, today),
@@ -70,9 +98,12 @@ export default function CalendarScreen() {
     <ScrollView 
       style={styles.container} 
       contentContainerStyle={styles.content}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.emerald} />}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={Colors.emerald} />}
       showsVerticalScrollIndicator={false}
     >
+      {/* Offline Alert Banner */}
+      {isOffline && <OfflineBanner lastSync={lastSync} />}
+
       <View style={styles.hero}>
         <View style={styles.badge}>
           <CalendarDays size={12} color={Colors.emerald} />
@@ -89,15 +120,19 @@ export default function CalendarScreen() {
         
         <View style={styles.heroStats}>
           <View style={styles.heroStat}>
-            <Typography variant="lg" weight="bold" color="navy" fontFamily="heading">
-              {formatCurrency(totalDueIn30, currencyCode)}
-            </Typography>
+            {loading ? <Skeleton width={100} height={24} style={{ marginBottom: 4 }} /> : (
+              <Typography variant="lg" weight="bold" color="navy" fontFamily="heading">
+                {formatCurrency(totalDueIn30, currencyCode)}
+              </Typography>
+            )}
             <Typography variant="xs" color="slate">Due in 30 days</Typography>
           </View>
           <View style={styles.heroStat}>
-            <Typography variant="lg" weight="bold" color="navy" fontFamily="heading">
-              {dueIn30.length}
-            </Typography>
+            {loading ? <Skeleton width={40} height={24} style={{ marginBottom: 4 }} /> : (
+              <Typography variant="lg" weight="bold" color="navy" fontFamily="heading">
+                {dueIn30.length}
+              </Typography>
+            )}
             <Typography variant="xs" color="slate">Payments</Typography>
           </View>
         </View>
@@ -114,87 +149,93 @@ export default function CalendarScreen() {
         </Card>
       )}
 
-      <View style={styles.calendarCard}>
-        <View style={styles.calendarHeader}>
-          <Typography variant="md" weight="medium" color="navy" fontFamily="heading">
-            {currentMonth.toLocaleDateString(getCurrencyConfig(currencyCode).locale, { month: 'long', year: 'numeric' })}
-          </Typography>
-          <View style={styles.monthControls}>
-            <TouchableOpacity onPress={() => changeMonth(-1)} style={styles.controlBtn}>
-              <ChevronLeft size={20} color={Colors.navy} />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => changeMonth(1)} style={styles.controlBtn}>
-              <ChevronRight size={20} color={Colors.navy} />
-            </TouchableOpacity>
+      {loading ? (
+        <View style={styles.calendarCard}>
+          <Skeleton width="100%" height={320} />
+        </View>
+      ) : (
+        <View style={styles.calendarCard}>
+          <View style={styles.calendarHeader}>
+            <Typography variant="md" weight="medium" color="navy" fontFamily="heading">
+              {currentMonth.toLocaleDateString(getCurrencyConfig(currencyCode).locale, { month: 'long', year: 'numeric' })}
+            </Typography>
+            <View style={styles.monthControls}>
+              <TouchableOpacity onPress={() => changeMonth(-1)} style={styles.controlBtn}>
+                <ChevronLeft size={20} color={Colors.navy} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => changeMonth(1)} style={styles.controlBtn}>
+                <ChevronRight size={20} color={Colors.navy} />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <View style={styles.weekHeader}>
+            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+              <Typography key={d} variant="xs" weight="medium" color="slate" align="center" style={styles.weekDay}>
+                {d.toUpperCase()}
+              </Typography>
+            ))}
+          </View>
+
+          <View style={styles.grid}>
+            {Array.from({ length: firstDayOfWeek }).map((_, i) => (
+              <View key={`pad-${i}`} style={styles.cellEmpty} />
+            ))}
+
+            {Array.from({ length: daysInMonth }).map((_, i) => {
+              const dayNum = i + 1;
+              const date = new Date(year, month, dayNum);
+              const dateKey = formatDateKey(date);
+              const entry = days[dateKey];
+              const isToday = formatDateKey(today) === dateKey;
+              const isSelected = selectedDate === dateKey;
+
+              let cellStyle = {};
+              if (entry) {
+                const hasOverdue = entry.loans.some(l => l.status === 'overdue');
+                const allPaid = entry.loans.every(l => l.status === 'paid');
+                if (hasOverdue) cellStyle = { backgroundColor: '#fef2f2' };
+                else if (allPaid) cellStyle = { backgroundColor: '#ecfdf5' };
+                else cellStyle = { backgroundColor: '#fffbeb' };
+              }
+
+              return (
+                <TouchableOpacity 
+                  key={i} 
+                  style={[
+                    styles.cell, 
+                    cellStyle,
+                    isSelected && styles.cellSelected
+                  ]}
+                  onPress={() => setSelectedDate(dateKey)}
+                >
+                  <View style={[styles.dayLabel, isToday && styles.dayLabelToday]}>
+                    <Typography variant="xs" weight="bold" color={isToday ? 'white' : 'slateDark'}>
+                      {dayNum}
+                    </Typography>
+                  </View>
+                  <View style={styles.dotRow}>
+                    {entry?.loans.slice(0, 2).map((l, idx) => (
+                      <View 
+                        key={idx} 
+                        style={[
+                          styles.dot, 
+                          { backgroundColor: l.status === 'paid' ? Colors.emerald : l.status === 'overdue' ? Colors.red : Colors.amber }
+                        ]} 
+                      />
+                    ))}
+                  </View>
+                  {entry && (
+                    <Typography variant="xs" weight="medium" color="slate" align="center" style={styles.cellAmount} numberOfLines={1}>
+                      {formatCurrency(entry.totalDue, currencyCode, { compact: true })}
+                    </Typography>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
-
-        <View style={styles.weekHeader}>
-          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
-            <Typography key={d} variant="xs" weight="medium" color="slate" align="center" style={styles.weekDay}>
-              {d.toUpperCase()}
-            </Typography>
-          ))}
-        </View>
-
-        <View style={styles.grid}>
-          {Array.from({ length: firstDayOfWeek }).map((_, i) => (
-            <View key={`pad-${i}`} style={styles.cellEmpty} />
-          ))}
-
-          {Array.from({ length: daysInMonth }).map((_, i) => {
-            const dayNum = i + 1;
-            const date = new Date(year, month, dayNum);
-            const dateKey = formatDateKey(date);
-            const entry = days[dateKey];
-            const isToday = formatDateKey(today) === dateKey;
-            const isSelected = selectedDate === dateKey;
-
-            let cellStyle = {};
-            if (entry) {
-              const hasOverdue = entry.loans.some(l => l.status === 'overdue');
-              const allPaid = entry.loans.every(l => l.status === 'paid');
-              if (hasOverdue) cellStyle = { backgroundColor: '#fef2f2' };
-              else if (allPaid) cellStyle = { backgroundColor: '#ecfdf5' };
-              else cellStyle = { backgroundColor: '#fffbeb' };
-            }
-
-            return (
-              <TouchableOpacity 
-                key={i} 
-                style={[
-                  styles.cell, 
-                  cellStyle,
-                  isSelected && styles.cellSelected
-                ]}
-                onPress={() => setSelectedDate(dateKey)}
-              >
-                <View style={[styles.dayLabel, isToday && styles.dayLabelToday]}>
-                  <Typography variant="xs" weight="bold" color={isToday ? 'white' : 'slateDark'}>
-                    {dayNum}
-                  </Typography>
-                </View>
-                <View style={styles.dotRow}>
-                  {entry?.loans.slice(0, 2).map((l, idx) => (
-                    <View 
-                      key={idx} 
-                      style={[
-                        styles.dot, 
-                        { backgroundColor: l.status === 'paid' ? Colors.emerald : l.status === 'overdue' ? Colors.red : Colors.amber }
-                      ]} 
-                    />
-                  ))}
-                </View>
-                {entry && (
-                  <Typography variant="xs" weight="medium" color="slate" align="center" style={styles.cellAmount} numberOfLines={1}>
-                    {formatCurrency(entry.totalDue, currencyCode, { compact: true })}
-                  </Typography>
-                )}
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
+      )}
 
       <View style={styles.detailsSection}>
         <View style={styles.detailsHeader}>
@@ -205,7 +246,19 @@ export default function CalendarScreen() {
           </Typography>
         </View>
 
-        {selectedDay ? (
+        {loading ? (
+          <View style={styles.dayList}>
+            {[1, 2, 3].map(i => (
+              <View key={i} style={styles.dueItem}>
+                <View style={styles.dueMain}>
+                  <Skeleton width={100} height={20} style={{ marginBottom: 4 }} />
+                  <Skeleton width={60} height={14} />
+                </View>
+                <Skeleton width={80} height={20} />
+              </View>
+            ))}
+          </View>
+        ) : selectedDay ? (
           <View style={styles.dayList}>
             {selectedDay.loans.map(l => (
               <View key={l.loanId} style={styles.dueItem}>
@@ -315,5 +368,6 @@ const styles = StyleSheet.create({
   dueMain: { gap: 2 },
   dueStatus: { alignItems: 'flex-end', gap: 2 },
   emptyListText: { marginTop: Spacing.xl },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.background },
 });
 

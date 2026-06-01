@@ -1,12 +1,13 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { Colors, Spacing, Shadows } from '@/constants/theme';
 import { Menu, Bell, ArrowLeft } from 'lucide-react-native';
-import { useRouter, useNavigation } from 'expo-router';
+import { useRouter, useNavigation, useFocusEffect } from 'expo-router';
 import { DrawerActions } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/AuthContext';
 import Typography from '@/components/ui/Typography';
+import { getNotifications } from '@/services/notifications';
 
 type DashboardHeaderProps = {
   title: string;
@@ -18,11 +19,29 @@ type DashboardHeaderProps = {
 export default function DashboardHeader({ title, context = 'Workspace', showBack = false, backHref }: DashboardHeaderProps) {
   const { user } = useAuth();
   const firstLetter = user?.user_metadata?.full_name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || 'U';
-  // Mock notifications state
-  const hasNotifications = false;
+  
+  const [unreadCount, setUnreadCount] = useState(0);
   const navigation = useNavigation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
+      const fetchCount = async () => {
+        try {
+          const data = await getNotifications();
+          if (isActive) {
+            setUnreadCount(data.filter((n) => !n.isRead).length);
+          }
+        } catch (error) {
+          console.error("Failed to fetch notifications count:", error);
+        }
+      };
+      if (user) fetchCount();
+      return () => { isActive = false; };
+    }, [user])
+  );
 
   const openDrawer = () => {
     navigation.dispatch(DrawerActions.openDrawer());
@@ -33,7 +52,7 @@ export default function DashboardHeader({ title, context = 'Workspace', showBack
   };
 
   const handleNotifications = () => {
-    Alert.alert('Notifications', 'You have no new notifications.');
+    router.push('/notifications');
   };
 
   return (
@@ -70,7 +89,13 @@ export default function DashboardHeader({ title, context = 'Workspace', showBack
         <View style={styles.rightSection}>
           <TouchableOpacity style={styles.actionButton} onPress={handleNotifications}>
             <Bell size={20} color={Colors.slate} />
-            {hasNotifications && <View style={styles.badge} />}
+            {unreadCount > 0 && (
+              <View style={styles.badge}>
+                <Typography variant="caption" color="white" style={{ fontSize: 9, fontWeight: 'bold' }}>
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </Typography>
+              </View>
+            )}
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.profileButton} activeOpacity={0.8} onPress={handleProfile}>
@@ -137,12 +162,15 @@ const styles = StyleSheet.create({
   },
   badge: {
     position: 'absolute',
-    right: 8,
-    top: 8,
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    right: 4,
+    top: 4,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
     backgroundColor: Colors.amber,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 2,
   },
   profileButton: {
     width: 34,

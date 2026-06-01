@@ -22,6 +22,8 @@ type EMIOptimizerPanelProps = {
   loans: LoanRecord[];
   extraBudget: number;
   onExtraBudgetChange: (val: number) => void;
+  oneTimePayment?: number;
+  onOneTimePaymentChange?: (val: number) => void;
   currencyCode?: string;
 };
 
@@ -35,6 +37,8 @@ export default function EMIOptimizerPanel({
   loans,
   extraBudget,
   onExtraBudgetChange,
+  oneTimePayment = 0,
+  onOneTimePaymentChange,
   currencyCode = 'INR',
 }: EMIOptimizerPanelProps) {
   const loanStates = useMemo(() => {
@@ -48,16 +52,25 @@ export default function EMIOptimizerPanel({
   }, [loans]);
 
   const result = useMemo(
-    () => optimizeEMIAllocation(loanStates, extraBudget, currencyCode),
-    [loanStates, extraBudget, currencyCode]
+    () => optimizeEMIAllocation(loanStates, extraBudget, currencyCode, 240, oneTimePayment),
+    [loanStates, extraBudget, currencyCode, oneTimePayment]
   );
+
+  // Derive which loan is the current primary target (highest extra allocation)
+  const targetLoan = useMemo(() => {
+    if (!result.allocations.length) return null;
+    const top = result.allocations.reduce((best, curr) =>
+      curr.extraAllocation > best.extraAllocation ? curr : best
+    );
+    return top.extraAllocation > 0 ? top.loanName : null;
+  }, [result.allocations]);
 
   return (
     <Card style={styles.container}>
       <View style={styles.header}>
-        <Badge text="AI Optimized" variant="green" />
+        <Badge text="Smart Engine" variant="green" />
         <Typography variant="body" weight="bold" color="textPrimary" fontFamily="heading" style={styles.title}>
-          AI-Optimized Allocation
+          Smart Payment Engine
         </Typography>
         <Typography variant="sm" color="textMuted" style={styles.subText}>
           Split your extra budget optimally based on rates and balances.
@@ -74,6 +87,18 @@ export default function EMIOptimizerPanel({
         onChange={onExtraBudgetChange}
       />
 
+      {onOneTimePaymentChange && (
+        <SliderField
+          label="One-time prepayment"
+          value={oneTimePayment}
+          min={0}
+          max={1000000}
+          step={10000}
+          displayValue={formatCurrency(oneTimePayment, currencyCode)}
+          onChange={onOneTimePaymentChange}
+        />
+      )}
+
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.scroll}>
         <View>
           <View style={[styles.tableHeader, { borderBottomColor: Colors.borderLight }]}>
@@ -81,7 +106,6 @@ export default function EMIOptimizerPanel({
             <Typography variant="xs" weight="bold" color="textMuted" style={[styles.cell, { width: 90 }]}>Base EMI</Typography>
             <Typography variant="xs" weight="bold" color="textMuted" style={[styles.cell, { width: 90 }]}>+ Extra</Typography>
             <Typography variant="xs" weight="bold" color="textMuted" style={[styles.cell, { width: 100 }]}>Total Pay</Typography>
-            <Typography variant="xs" weight="bold" color="textMuted" style={[styles.cell, { width: 80 }]}>Savings %</Typography>
           </View>
 
           {result.allocations.map((allocation) => (
@@ -91,39 +115,42 @@ export default function EMIOptimizerPanel({
               <Typography variant="xs" color={allocation.extraAllocation > 0 ? 'emerald' : 'textMuted'} weight="medium" style={[styles.cell, { width: 90 }]}>
                 {allocation.extraAllocation > 0 ? `+${formatCurrency(allocation.extraAllocation, currencyCode)}` : '-'}
               </Typography>
-              <Typography variant="xs" color="textPrimary" weight="semiBold" style={[styles.cell, { width: 100 }]}>{formatCurrency(allocation.totalPayment, currencyCode)}</Typography>
-              <Typography variant="xs" color="textMuted" style={[styles.cell, { width: 80 }]}>{(allocation.marginalInterestSaved * 100).toFixed(1)}%</Typography>
+              <Typography variant="xs" color="textPrimary" weight="bold" style={[styles.cell, { width: 100 }]}>{formatCurrency(allocation.totalPayment, currencyCode)}</Typography>
             </View>
           ))}
         </View>
       </ScrollView>
 
       <View style={styles.badgeRow}>
-        <View style={[styles.footerBadge, { backgroundColor: Colors.emeraldBg }]}>
-          <Typography variant="xs" color="emerald" weight="bold">
-            {formatCurrency(result.totalInterestSaved, currencyCode)} Saved
-          </Typography>
-        </View>
-        
-        {result.vsAvalanche.monthsDifference > 0 && (
-          <View style={[styles.footerBadge, { backgroundColor: '#e2e8f0' }]}>
-            <Typography variant="xs" color="textPrimary" weight="bold">
-              {result.vsAvalanche.monthsDifference} mo earlier vs Avalanche
+        {/* Target loan chip — shows which loan gets the extra allocation */}
+        {targetLoan && extraBudget > 0 && (
+          <View style={[styles.footerBadge, { backgroundColor: Colors.emeraldBg }]}>
+            <Typography variant="xs" color="emerald" weight="bold">
+              Target: {targetLoan}
+            </Typography>
+          </View>
+        )}
+
+        {/* One-time prepayment active indicator */}
+        {oneTimePayment > 0 && (
+          <View style={[styles.footerBadge, { backgroundColor: '#fef9c3' }]}>
+            <Typography variant="xs" color="amber" weight="bold">
+              +{formatCurrency(oneTimePayment, currencyCode)} prepaid
             </Typography>
           </View>
         )}
 
         <View style={[
-          styles.footerBadge, 
-          { 
-            backgroundColor: Colors.surface, 
-            borderWidth: 1, 
+          styles.footerBadge,
+          {
+            backgroundColor: Colors.surface,
+            borderWidth: 1,
             borderColor: result.confidenceScore >= 70 ? Colors.emerald : result.confidenceScore >= 40 ? Colors.amber : Colors.borderMid
           }
         ]}>
-          <Typography 
-            variant="xs" 
-            color={result.confidenceScore >= 70 ? 'emerald' : result.confidenceScore >= 40 ? 'amber' : 'textMuted'} 
+          <Typography
+            variant="xs"
+            color={result.confidenceScore >= 70 ? 'emerald' : result.confidenceScore >= 40 ? 'amber' : 'textMuted'}
             weight="bold"
           >
             {confidenceLabel(result.confidenceScore)}

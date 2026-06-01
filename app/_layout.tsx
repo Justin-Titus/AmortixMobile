@@ -67,6 +67,14 @@ export default function RootLayout() {
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="(auth)" />
             <Stack.Screen name="(drawer)" />
+            <Stack.Screen 
+              name="notifications" 
+              options={{ 
+                presentation: 'modal',
+                headerShown: true,
+                headerTitle: "Notifications",
+              }} 
+            />
           </Stack>
         </AuthProvider>
       </SafeAreaProvider>

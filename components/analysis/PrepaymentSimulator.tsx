@@ -66,7 +66,7 @@ export default function PrepaymentSimulator({
     const extra = tab === 'monthly' ? Number(monthlyExtra) || 0 : tab === 'hybrid' ? Number(hybridMonthly) || 0 : 0;
 
     const adjustedOutstanding = Math.max(0, outstandingBalance - lump);
-    const schedule = generateAmortizationSchedule(adjustedOutstanding, interestRate, remainingMonths, extra);
+    const schedule = generateAmortizationSchedule(adjustedOutstanding, interestRate, remainingMonths, extra, emiAmount);
     const summary = getScheduleSummary(schedule);
 
     return { lump, extra, schedule, summary };
@@ -130,6 +130,12 @@ export default function PrepaymentSimulator({
   const futureValue = futureValueLump + futureValueMonthly;
   const fdInterestEarned = Math.max(0, Math.round((futureValue - scenarioCapital) * 100) / 100);
   const netAdvantage = interestSaved - fdInterestEarned;
+
+  const investmentActionText = tab === 'lump' 
+    ? `${formatCurrency(scenario.lump, currencyCode)} upfront in a 7% FD`
+    : tab === 'monthly'
+    ? `${formatCurrency(scenario.extra, currencyCode)} monthly in a 7% RD`
+    : `${formatCurrency(scenario.lump, currencyCode)} upfront in a 7% FD and ${formatCurrency(scenario.extra, currencyCode)} monthly in a 7% RD`;
 
   return (
     <Card style={styles.container}>
@@ -265,7 +271,7 @@ export default function PrepaymentSimulator({
       {/* Financial Comparison Tip */}
       <View style={styles.advContainer}>
         <Typography variant="xs" color="slate" style={styles.advText}>
-          If you invested {formatCurrency(scenarioCapital, currencyCode)} in a fixed deposit at 7%, you'd earn {formatCurrency(fdInterestEarned, currencyCode)} in interest. Prepaying saves {formatCurrency(interestSaved, currencyCode)} in interest, giving you a net advantage of {formatCurrency(netAdvantage, currencyCode)}.
+          If you invested {investmentActionText} instead for the next {months} months, you'd earn {formatCurrency(fdInterestEarned, currencyCode)} in interest. Prepaying saves {formatCurrency(interestSaved, currencyCode)} in interest, giving you a net advantage of {formatCurrency(netAdvantage, currencyCode)}.
         </Typography>
       </View>
     </Card>
