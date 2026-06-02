@@ -17,7 +17,7 @@ import Typography from '@/components/ui/Typography';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { signIn } = useAuth();
+  const { signIn, signInWithGoogle } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -49,6 +49,16 @@ export default function LoginScreen() {
     setIsSubmitting(false);
   };
 
+  const handleGoogleLogin = async () => {
+    setIsSubmitting(true);
+    setError(null);
+    const result = await signInWithGoogle();
+    if (result.error) {
+      setError(result.error);
+    }
+    setIsSubmitting(false);
+  };
+
   return (
     <AuthContainer>
       <AuthHeader 
@@ -58,7 +68,7 @@ export default function LoginScreen() {
 
       <View style={styles.card}>
         {/* Social Auth */}
-        <TouchableOpacity style={styles.googleBtn} activeOpacity={0.8}>
+        <TouchableOpacity style={styles.googleBtn} activeOpacity={0.8} onPress={handleGoogleLogin}>
           <Chrome size={20} color={Colors.navy} style={styles.googleIcon} />
           <Typography weight="bold" color="navy" style={styles.googleText}>Continue with Google</Typography>
         </TouchableOpacity>

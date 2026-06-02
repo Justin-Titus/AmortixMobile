@@ -1,6 +1,12 @@
 import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Session, User } from '@supabase/supabase-js';
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
+
+GoogleSignin.configure({
+  webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || 'YOUR_WEB_CLIENT_ID_FROM_GOOGLE',
+  iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || 'YOUR_IOS_CLIENT_ID_FROM_GOOGLE',
+});
 
 type AuthContextType = {
   session: Session | null;
@@ -10,6 +16,7 @@ type AuthContextType = {
   signUp: (name: string, email: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: string | null }>;
+  signInWithGoogle: () => Promise<{ error: string | null }>;
 };
 
 const AuthContext = createContext<AuthContextType>({
@@ -20,6 +27,7 @@ const AuthContext = createContext<AuthContextType>({
   signUp: async () => ({ error: null }),
   signOut: async () => {},
   resetPassword: async () => ({ error: null }),
+  signInWithGoogle: async () => ({ error: null }),
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -79,6 +87,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error: null };
   };
 
+  const signInWithGoogle = async () => {
+    try {
+      await GoogleSignin.hasPlayServices();
+      const response = await GoogleSignin.signIn();
+      const idToken = response.data?.idToken;
+      if (idToken) {
+        const { data, error } = await supabase.auth.signInWithIdToken({
+          provider: 'google',
+          token: idToken,
+        });
+        if (error) {
+          return { error: error.message };
+        }
+        return { error: null };
+      } else {
+        return { error: 'No ID token present!' };
+      }
+    } catch (error: any) {
+      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+        return { error: null };
+      } else if (error.code === statusCodes.IN_PROGRESS) {
+        return { error: 'Sign in already in progress' };
+      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        return { error: 'Play services not available or outdated' };
+      } else {
+        return { error: error.message || 'An unknown error occurred during Google sign in' };
+      }
+    }
+  };
+
   const value = useMemo(() => ({
     session,
     user: session?.user ?? null,
@@ -87,6 +125,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signUp,
     signOut,
     resetPassword,
+    signInWithGoogle,
   }), [session, isLoading]);
 
   return (
