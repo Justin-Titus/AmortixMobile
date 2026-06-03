@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScrollView, View, StyleSheet } from 'react-native';
+import { ScrollView, View, StyleSheet, Linking, TouchableOpacity } from 'react-native';
 import { Colors, Spacing } from '@/constants/theme';
 import { Shield, Lock, Eye, FileText } from 'lucide-react-native';
 import Typography from '@/components/ui/Typography';
@@ -88,8 +88,13 @@ export default function PrivacyScreen() {
 
       <View style={s.footer}>
         <Typography variant="caption" color="slate" align="center">
-          Have questions about this Privacy Policy? Contact us at amortix.admin@gmail.com
+          Have questions about this Privacy Policy? Contact us at{' '}
         </Typography>
+        <TouchableOpacity onPress={() => Linking.openURL('mailto:amortix.admin@gmail.com')}>
+          <Typography variant="caption" color="emerald" align="center" style={{ textDecorationLine: 'underline' }}>
+            amortix.admin@gmail.com
+          </Typography>
+        </TouchableOpacity>
       </View>
       
       <View style={{ height: 100 }} />

@@ -172,11 +172,11 @@ export default function RegisterScreen() {
           <Text style={styles.termsText}>
             By signing up, you agree to our{' '}
           </Text>
-          <TouchableOpacity onPress={() => router.push('/(drawer)/(tabs)/terms')}>
+          <TouchableOpacity onPress={() => router.push('/terms')}>
             <Text style={styles.termsLink}>Terms of Service</Text>
           </TouchableOpacity>
           <Text style={styles.termsText}> and </Text>
-          <TouchableOpacity onPress={() => router.push('/(drawer)/(tabs)/privacy')}>
+          <TouchableOpacity onPress={() => router.push('/privacy')}>
             <Text style={styles.termsLink}>Privacy Policy</Text>
           </TouchableOpacity>
           <Text style={styles.termsText}>.</Text>

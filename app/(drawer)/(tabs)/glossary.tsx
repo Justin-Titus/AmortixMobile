@@ -122,7 +122,7 @@ export default function GlossaryScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: Spacing.lg, paddingTop: Spacing.md, paddingBottom: 40 },
+  content: { padding: Spacing.lg, paddingTop: Spacing.md, paddingBottom: 100 },
   hero: {
     backgroundColor: Colors.white, padding: Spacing.xl, borderRadius: Radius.xxl,
     marginBottom: Spacing.xl, ...Shadows.card,

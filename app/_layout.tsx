@@ -67,6 +67,8 @@ export default function RootLayout() {
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="(auth)" />
             <Stack.Screen name="(drawer)" />
+            <Stack.Screen name="terms" options={{ headerShown: true, title: 'Terms of Service' }} />
+            <Stack.Screen name="privacy" options={{ headerShown: true, title: 'Privacy Policy' }} />
             <Stack.Screen 
               name="notifications" 
               options={{ 

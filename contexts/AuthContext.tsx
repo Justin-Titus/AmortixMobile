@@ -76,6 +76,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
+    try {
+      await GoogleSignin.signOut();
+    } catch (error) {
+      console.log('Google SignOut Error:', error);
+    }
     await supabase.auth.signOut();
   };
 

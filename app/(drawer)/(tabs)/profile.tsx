@@ -177,7 +177,7 @@ export default function ProfileScreen() {
 
         <TouchableOpacity 
           style={s.linkRow}
-          onPress={() => router.push('/(drawer)/(tabs)/privacy')}
+          onPress={() => router.push('/privacy')}
         >
           <View style={s.linkRowLeft}>
             <Lock size={18} color={Colors.emerald} />
@@ -188,7 +188,7 @@ export default function ProfileScreen() {
 
         <TouchableOpacity 
           style={[s.linkRow, { borderBottomWidth: 0 }]}
-          onPress={() => router.push('/(drawer)/(tabs)/terms')}
+          onPress={() => router.push('/terms')}
         >
           <View style={s.linkRowLeft}>
             <FileText size={18} color={Colors.emerald} />

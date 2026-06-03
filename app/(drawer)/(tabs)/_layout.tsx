@@ -122,22 +122,6 @@ export default function TabsLayout() {
           href: null,
         }}
       />
-      <Tabs.Screen
-        name="privacy"
-        options={{
-          title: 'Privacy Policy',
-          header: () => <DashboardHeader title="Privacy Policy" context="Data protection" showBack={true} backHref="/profile" />,
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="terms"
-        options={{
-          title: 'Terms of Service',
-          header: () => <DashboardHeader title="Terms of Service" context="Legal agreement" showBack={true} backHref="/profile" />,
-          href: null,
-        }}
-      />
     </Tabs>
   );
 }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScrollView, View, StyleSheet } from 'react-native';
+import { ScrollView, View, StyleSheet, Linking, TouchableOpacity } from 'react-native';
 import { Colors, Spacing } from '@/constants/theme';
 import { Scale, FileText, CheckCircle, AlertTriangle } from 'lucide-react-native';
 import Typography from '@/components/ui/Typography';
@@ -90,8 +90,13 @@ export default function TermsScreen() {
 
       <View style={s.footer}>
         <Typography variant="caption" color="slate" align="center">
-          Questions regarding these Terms of Service? Please reach out to amortix.admin@gmail.com
+          Questions regarding these Terms of Service? Please reach out to{' '}
         </Typography>
+        <TouchableOpacity onPress={() => Linking.openURL('mailto:amortix.admin@gmail.com')}>
+          <Typography variant="caption" color="emerald" align="center" style={{ textDecorationLine: 'underline' }}>
+            amortix.admin@gmail.com
+          </Typography>
+        </TouchableOpacity>
       </View>
       
       <View style={{ height: 100 }} />
