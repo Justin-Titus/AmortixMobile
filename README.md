@@ -1,113 +1,93 @@
 <div align="center">
-  <img src="public/Amortix.png" alt="Amortix Logo" width="200" />
-  <h1>Amortix</h1>
-  <p><strong>The Enterprise-Grade AI Loan Management & Debt Optimization Platform</strong></p>
+  <img src="assets/Amortix.png" alt="Amortix Logo" width="200" />
+  <h1>Amortix Mobile</h1>
+  <p><strong>The Enterprise-Grade AI Loan Management & Debt Optimization Platform (Mobile App)</strong></p>
 
-  [![Next.js](https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org/)
+  [![React Native](https://img.shields.io/badge/React_Native-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactnative.dev/)
+  [![Expo](https://img.shields.io/badge/Expo-000020?style=for-the-badge&logo=expo&logoColor=white)](https://expo.dev/)
   [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-  [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS_v4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
   [![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
-  [![Prisma](https://img.shields.io/badge/Prisma-2D3748?style=for-the-badge&logo=prisma&logoColor=white)](https://www.prisma.io/)
 </div>
 
 ---
 
 ## 🚀 Overview
 
-**Amortix** is a sophisticated, AI-driven financial platform designed to help users regain control of their debts. By combining advanced amortization modeling with AI-powered insights, Amortix provides a comprehensive suite of tools for tracking loans, analyzing "interest leaks," and simulating repayment strategies to achieve financial freedom faster.
+**Amortix Mobile** is the cross-platform mobile companion to the Amortix ecosystem. It brings advanced amortization modeling, AI-powered insights, and loan tracking directly to iOS and Android devices, allowing users to manage their financial health and debts on the go.
+
+> **🌐 Companion Web App**  
+> This repository contains the React Native (Expo) mobile application. Amortix also has a companion web dashboard built with Next.js! You can check out the web repository here: [Amortix Web Repository](https://github.com/Justin-Titus/Amortix)
 
 ## ✨ Key Features
 
-- 🏦 **Comprehensive Loan Dashboard**: Add, edit, and manage all your loans in one centralized, intuitive interface.
-- 🧠 **AI Chat Advisor**: An integrated AI assistant (powered by Groq) that provides contextual guidance on your specific loan data.
-- 🔍 **Financial Health Analysis**: Real-time insights into interest costs, "interest leaks," and debt-to-income ratios.
-- 📊 **Strategy Simulator**: Compare different repayment strategies (Snowball vs. Avalanche) to see how much interest and time you can save.
-- 📅 **EMI Calendar**: A visual representation of your upcoming payments and cash flow requirements.
-- 📜 **Detailed Amortization**: Full breakdown of every payment, including principal vs. interest splits over time.
-- 🔐 **Secure Authentication**: Robust user management powered by **Supabase Auth**, including Google OAuth integration.
-- 📄 **Export Reports**: Generate professional PDF reports of your loan schedules and financial summaries.
+- 📱 **Native Performance**: Smooth, native-feeling animations using `react-native-reanimated` and gesture handling.
+- 🏦 **Comprehensive Loan Dashboard**: Add, edit, and manage all your loans in an intuitive mobile interface.
+- 🧠 **AI Chat Advisor**: An integrated AI assistant providing contextual guidance on your specific loan data.
+- 📅 **EMI Calendar**: A visual representation of your upcoming payments optimized for mobile screens.
+- 🔐 **Secure Authentication**: Robust user management powered by **Supabase Auth** with secure token storage (`expo-secure-store`).
+- 📄 **Export Reports**: Generate and share professional PDF reports directly from your mobile device using `expo-print` and `expo-sharing`.
 
 ## 🛠️ Tech Stack
 
-- **Framework**: [Next.js (App Router)](https://nextjs.org/)
-- **Frontend**: [React 19](https://react.dev/), [Tailwind CSS v4](https://tailwindcss.com/)
-- **Animations**: [Framer Motion](https://www.framer.com/motion/)
-- **Charts**: [Recharts](https://recharts.org/)
-- **Database**: [PostgreSQL (via Supabase)](https://supabase.com/)
-- **ORM**: [Prisma](https://www.prisma.io/)
-- **Auth**: [Supabase Auth](https://supabase.com/auth)
-- **AI**: [Vercel AI SDK](https://sdk.vercel.ai/) & [Groq](https://groq.com/)
-- **Email**: [Nodemailer](https://nodemailer.com/)
+- **Framework**: [React Native](https://reactnative.dev/) & [Expo](https://expo.dev/)
+- **Routing**: [Expo Router](https://docs.expo.dev/router/introduction/) & [React Navigation](https://reactnavigation.org/)
+- **Language**: [TypeScript](https://www.typescriptlang.org/)
+- **State/Form Management**: [React Hook Form](https://react-hook-form.com/) & [Zod](https://zod.dev/)
+- **Backend & Auth**: [Supabase](https://supabase.com/)
+- **Fonts & Icons**: [Expo Google Fonts](https://github.com/expo/google-fonts) & [Lucide React Native](https://lucide.dev/)
 
 ## 📂 Project Structure
 
 ```text
-├── app/             # Next.js App Router (Routes & API)
-├── components/      # UI Components (Shared & Page-specific)
-├── lib/             # Core logic: AI, calculations, Supabase, Prisma, email
-├── prisma/          # Database schema & migrations
-├── public/          # Static assets & logos
-└── types/           # Global TypeScript definitions
+├── app/             # Expo Router screens and navigation flows (Tabs, Drawer, Auth)
+├── components/      # Reusable UI components (Buttons, Cards, Inputs)
+├── constants/       # Global constants, theme configurations, and tokens
+├── contexts/        # React context providers (e.g., AuthContext)
+├── hooks/           # Custom React hooks
+└── lib/             # Core logic: API clients, Supabase setup, AI integration
 ```
 
-## 🏁 Getting Started
+## 🏁 Getting Started (Internal Devs)
 
-### 1. Clone & Install
+### 1. Prerequisites
+
+Make sure you have Node.js and `pnpm` installed. You will also need the [Expo Go](https://expo.dev/client) app on your mobile device or an iOS Simulator / Android Emulator installed on your machine.
+
+### 2. Install Dependencies
 
 ```bash
-git clone https://github.com/Justin-Titus/Amortix.git
-cd Amortix
+cd AmortixMobile
 pnpm install
 ```
 
-### 2. Environment Setup
+### 3. Environment Setup
 
-Create a `.env` file in the root directory and populate it with the following:
+Create a `.env` file in the root of the `AmortixMobile` directory. You will need the Supabase configuration variables:
 
 ```env
-# Application
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-
-# Supabase (Database & Auth)
-NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
-DATABASE_URL="postgresql://postgres:[PASSWORD]@[HOST]:5432/postgres?sslmode=require"
-
-# AI Integration
-GROQ_API_KEY=your-groq-api-key
-
-# Google OAuth (Optional)
-NEXT_PUBLIC_GOOGLE_CLIENT_ID=your-google-client-id
-
-# Email (Nodemailer)
-GMAIL_USER=your-email@gmail.com
-GMAIL_APP_PASSWORD=your-app-password
-```
-
-### 3. Database Initialization
-
-```bash
-pnpm prisma generate
-pnpm prisma db push
+EXPO_PUBLIC_SUPABASE_URL=your-supabase-url
+EXPO_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
 ```
 
 ### 4. Run Development Server
 
+Start the Expo bundler:
+
 ```bash
-pnpm dev
+pnpm start
 ```
 
-Visit `http://localhost:3000` to see the application in action.
+From here, you can:
+- Press **`i`** to open the app in an iOS Simulator.
+- Press **`a`** to open the app in an Android Emulator.
+- Scan the **QR code** with your phone's camera (iOS) or the Expo Go app (Android) to test on a physical device.
 
 ## 📄 License
 
 This project is **Proprietary**. All rights reserved by Justin Titus. See the [LICENSE](LICENSE) file for more details.
-
-
 
 ---
 
 <div align="center">
   Built with ❤️ for financial freedom.
 </div>
-
