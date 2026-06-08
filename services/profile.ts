@@ -1,13 +1,5 @@
 import { supabase } from '@/lib/supabase';
 
-function uuidv4() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
-
 
 export type FinancialProfile = {
   id: string;
@@ -31,7 +23,8 @@ export type HealthSnapshot = {
 };
 
 export async function getProfile(): Promise<FinancialProfile | null> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
   if (!user) return null;
 
   const { data, error } = await supabase
@@ -57,13 +50,17 @@ export async function updateProfile(input: {
   emergencyFundMonths?: number;
   currency?: string;
 }) {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
   if (!user) return { error: 'Unauthorized' };
 
+  // NOTE: id is intentionally omitted from the upsert payload.
+  // On INSERT (no existing profile), the DB default generates a UUID.
+  // On UPDATE (onConflict: 'userId'), Supabase preserves the existing id.
+  // Previously passing id: uuidv4() would overwrite the primary key on every save.
   const { error } = await supabase
     .from('FinancialProfile')
     .upsert({
-      id: uuidv4(),
       userId: user.id,
       monthlyIncome: input.monthlyIncome ?? 0,
       monthlyExpenses: input.monthlyExpenses ?? 0,
@@ -82,7 +79,8 @@ export async function updateProfile(input: {
 }
 
 export async function getHealthSnapshots(): Promise<HealthSnapshot[]> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
   if (!user) return [];
 
   const { data, error } = await supabase
@@ -100,7 +98,8 @@ export async function getHealthSnapshots(): Promise<HealthSnapshot[]> {
 }
 
 export async function getUserData() {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
   if (!user) return null;
 
   const { data, error } = await supabase
@@ -117,7 +116,8 @@ export async function getUserData() {
 }
 
 export async function updateUserName(name: string) {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
   if (!user) return { error: 'Unauthorized' };
 
   const { error } = await supabase

@@ -10,28 +10,36 @@ import { Card } from '@/components/ui/Card';
 import Typography from '@/components/ui/Typography';
 import { Colors, Spacing, Radius } from '@/constants/theme';
 import { formatCurrency } from '@/lib/calculations';
-import {
-  Mail, Briefcase, Shield, PiggyBank, LogOut, ChevronRight,
-  LifeBuoy, FileText, Lock, HelpCircle, Coins,
-} from 'lucide-react-native';
+import { Mail, Briefcase, Shield, PiggyBank, LogOut, ChevronRight, LifeBuoy, FileText, Lock, HelpCircle, Coins, TrendingUp, TrendingDown } from 'lucide-react-native';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { useOfflineData } from '@/hooks/useOfflineData';
+import { saveOfflineProfile, getOfflineProfile, saveOfflineUserData, getOfflineUserData } from '@/lib/offline/cache';
 
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
   const router = useRouter();
-  const [profile, setProfile] = useState<FinancialProfile | null>(null);
-  const [userData, setUserData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-
-  const load = useCallback(async () => {
+  const fetcher = useCallback(async () => {
     const [p, u] = await Promise.all([getProfile(), getUserData()]);
-    setProfile(p);
-    setUserData(u);
+    return { profile: p, userData: u };
   }, []);
 
-  useEffect(() => { load().finally(() => setLoading(false)); }, [load]);
-  const onRefresh = async () => { setRefreshing(true); await load(); setRefreshing(false); };
+  const cacher = useCallback(async (data: { profile: FinancialProfile | null, userData: any }) => {
+    if (data.profile) await saveOfflineProfile(data.profile);
+    if (data.userData) await saveOfflineUserData(data.userData);
+  }, []);
+
+  const reader = useCallback(async () => {
+    const p = await getOfflineProfile();
+    const u = await getOfflineUserData();
+    return { profile: p, userData: u };
+  }, []);
+
+  const { data, loading, refreshing, refresh, isOffline } = useOfflineData({ fetcher, cacher, reader });
+
+  const profile = data?.profile ?? null;
+  const userData = data?.userData ?? null;
+
+  const onRefresh = () => refresh();
 
   if (loading) {
     return (
@@ -112,8 +120,8 @@ export default function ProfileScreen() {
           <Typography variant="md" weight="bold" color="navy" fontFamily="heading">
             Financial profile
           </Typography>
-          <TouchableOpacity onPress={() => router.push('/(drawer)/(tabs)/edit-profile')}>
-            <Typography variant="caption" weight="bold" color="emerald">Edit profile</Typography>
+          <TouchableOpacity onPress={() => !isOffline && router.push('/(drawer)/(tabs)/edit-profile')} disabled={isOffline}>
+            <Typography variant="caption" weight="bold" color={isOffline ? 'slateLight' : 'emerald'}>Edit profile</Typography>
           </TouchableOpacity>
         </View>
         {profile ? (
@@ -121,8 +129,8 @@ export default function ProfileScreen() {
             {[
               { icon: <Briefcase size={16} color={Colors.slate} />, label: 'Employment', value: profile.employmentType },
               { icon: <Coins size={16} color={Colors.slate} />, label: 'Default currency', value: profile.currency || 'INR' },
-              { icon: <Mail size={16} color={Colors.slate} />, label: 'Monthly income', value: formatCurrency(profile.monthlyIncome, profile.currency) },
-              { icon: <Mail size={16} color={Colors.slate} />, label: 'Monthly expenses', value: formatCurrency(profile.monthlyExpenses, profile.currency) },
+              { icon: <TrendingUp size={16} color={Colors.slate} />, label: 'Monthly income', value: formatCurrency(profile.monthlyIncome, profile.currency) },
+              { icon: <TrendingDown size={16} color={Colors.slate} />, label: 'Monthly expenses', value: formatCurrency(profile.monthlyExpenses, profile.currency) },
               { icon: <Shield size={16} color={Colors.slate} />, label: 'Credit score', value: profile.creditScoreRange },
               { icon: <PiggyBank size={16} color={Colors.slate} />, label: 'Emergency fund', value: profile.hasEmergencyFund ? `${profile.emergencyFundMonths} months` : 'Not set up' },
             ].map(item => (
@@ -138,8 +146,8 @@ export default function ProfileScreen() {
         ) : (
           <View style={s.noProfile}>
             <Typography variant="md" weight="medium" color="navy">No financial profile set up yet.</Typography>
-            <TouchableOpacity onPress={() => router.push('/(drawer)/(tabs)/edit-profile')}>
-              <Typography variant="caption" weight="bold" color="emerald" style={s.setupLink}>
+            <TouchableOpacity onPress={() => !isOffline && router.push('/(drawer)/(tabs)/edit-profile')} disabled={isOffline}>
+              <Typography variant="caption" weight="bold" color={isOffline ? 'slateLight' : 'emerald'} style={s.setupLink}>
                 Set up your profile →
               </Typography>
             </TouchableOpacity>

@@ -25,12 +25,19 @@ import {
 } from '@expo-google-fonts/ibm-plex-mono';
 
 import { usePushNotifications } from '@/hooks/usePushNotifications';
+import { useGlobalSync } from '@/hooks/useGlobalSync';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 
 // Prevent splash from hiding until we're ready
 SplashScreen.preventAutoHideAsync();
 
 function NotificationInitializer() {
   usePushNotifications();
+  return null;
+}
+
+function GlobalSyncInitializer() {
+  useGlobalSync();
   return null;
 }
 
@@ -59,28 +66,31 @@ export default function RootLayout() {
   }
 
   return (
-    <GestureHandlerRootView style={styles.root}>
-      <SafeAreaProvider>
-        <AuthProvider>
-          <NotificationInitializer />
-          <StatusBar style="dark" />
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="(auth)" />
-            <Stack.Screen name="(drawer)" />
-            <Stack.Screen name="terms" options={{ headerShown: true, title: 'Terms of Service' }} />
-            <Stack.Screen name="privacy" options={{ headerShown: true, title: 'Privacy Policy' }} />
-            <Stack.Screen 
-              name="notifications" 
-              options={{ 
-                presentation: 'modal',
-                headerShown: true,
-                headerTitle: "Notifications",
-              }} 
-            />
-          </Stack>
-        </AuthProvider>
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
+    <ErrorBoundary>
+      <GestureHandlerRootView style={styles.root}>
+        <SafeAreaProvider>
+          <AuthProvider>
+            <NotificationInitializer />
+            <GlobalSyncInitializer />
+            <StatusBar style="dark" />
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="(auth)" />
+              <Stack.Screen name="(drawer)" />
+              <Stack.Screen name="terms" options={{ headerShown: true, title: 'Terms of Service' }} />
+              <Stack.Screen name="privacy" options={{ headerShown: true, title: 'Privacy Policy' }} />
+              <Stack.Screen
+                name="notifications"
+                options={{
+                  presentation: 'modal',
+                  headerShown: true,
+                  headerTitle: 'Notifications',
+                }}
+              />
+            </Stack>
+          </AuthProvider>
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
+    </ErrorBoundary>
   );
 }
 

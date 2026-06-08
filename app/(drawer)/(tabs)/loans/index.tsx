@@ -47,8 +47,12 @@ export default function LoansScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      refresh();
-    }, [refresh])
+      const STALE_MS = 5 * 60 * 1000;
+      const lastSyncTs = lastSync ? new Date(lastSync).getTime() : 0;
+      if (Date.now() - lastSyncTs > STALE_MS) {
+        refresh();
+      }
+    }, [refresh, lastSync])
   );
 
   const loans = data?.loans ?? [];

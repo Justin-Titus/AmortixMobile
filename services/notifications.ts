@@ -12,7 +12,8 @@ export type NotificationRecord = {
 };
 
 export async function getNotifications(): Promise<NotificationRecord[]> {
-  const { data: user, error: authError } = await supabase.auth.getUser();
+  const { data: { session }, error: authError } = await supabase.auth.getSession();
+  const user = session?.user;
   if (authError || !user?.user) throw new Error('User not authenticated');
 
   const { data, error } = await supabase
@@ -35,7 +36,8 @@ export async function markAsRead(notificationId: string): Promise<void> {
 }
 
 export async function markAllAsRead(): Promise<void> {
-  const { data: user, error: authError } = await supabase.auth.getUser();
+  const { data: { session }, error: authError } = await supabase.auth.getSession();
+  const user = session?.user;
   if (authError || !user?.user) throw new Error('User not authenticated');
 
   const { error } = await supabase

@@ -17,9 +17,10 @@ type LogPaymentCardProps = {
   defaultAmount: number;
   onSuccess: () => void;
   currencyCode?: string;
+  isOffline?: boolean;
 };
 
-export function LogPaymentCard({ loanId, defaultAmount, onSuccess, currencyCode = 'INR' }: LogPaymentCardProps) {
+export function LogPaymentCard({ loanId, defaultAmount, onSuccess, currencyCode = 'INR', isOffline = false }: LogPaymentCardProps) {
   const [amount, setAmount] = useState(String(defaultAmount));
   const [date, setDate] = useState(new Date());
   const [showPicker, setShowPicker] = useState(false);
@@ -153,9 +154,10 @@ export function LogPaymentCard({ loanId, defaultAmount, onSuccess, currencyCode 
       {error && <Typography variant="xs" color="red" align="center" style={s.error}>{error}</Typography>}
 
       <Button
-        title={isSubmitting ? 'Recording...' : type === 'EMI' ? 'Log EMI' : 'Log Prepayment'}
+        title={isOffline ? 'Offline - Cannot record' : isSubmitting ? 'Recording...' : type === 'EMI' ? 'Log EMI' : 'Log Prepayment'}
         onPress={handleSubmit}
         loading={isSubmitting}
+        disabled={isOffline || isSubmitting}
         variant={type === 'EMI' ? 'primary' : 'secondary'}
         style={type === 'PREPAYMENT' ? s.prepaymentBtn : undefined}
         textStyle={type === 'PREPAYMENT' ? s.prepaymentBtnText : undefined}

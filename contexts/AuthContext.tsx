@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
+import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Session, User } from '@supabase/supabase-js';
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
@@ -52,16 +52,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = useCallback(async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       console.log('Supabase SignIn Error:', error);
       return { error: error.message };
     }
     return { error: null };
-  };
+  }, []);
 
-  const signUp = async (name: string, email: string, password: string) => {
+  const signUp = useCallback(async (name: string, email: string, password: string) => {
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -73,26 +73,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { error: error.message };
     }
     return { error: null };
-  };
+  }, []);
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     try {
       await GoogleSignin.signOut();
     } catch (error) {
       console.log('Google SignOut Error:', error);
     }
     await supabase.auth.signOut();
-  };
+  }, []);
 
-  const resetPassword = async (email: string) => {
+  const resetPassword = useCallback(async (email: string) => {
     const { error } = await supabase.auth.resetPasswordForEmail(email);
     if (error) {
       return { error: error.message };
     }
     return { error: null };
-  };
+  }, []);
 
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = useCallback(async () => {
     try {
       await GoogleSignin.hasPlayServices();
       const response = await GoogleSignin.signIn();
@@ -120,7 +120,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error: error.message || 'An unknown error occurred during Google sign in' };
       }
     }
-  };
+  }, []);
 
   const value = useMemo(() => ({
     session,
@@ -131,7 +131,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signOut,
     resetPassword,
     signInWithGoogle,
-  }), [session, isLoading]);
+  }), [session, isLoading, signIn, signUp, signOut, resetPassword, signInWithGoogle]);
+
 
   return (
     <AuthContext.Provider value={value}>

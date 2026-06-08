@@ -2,27 +2,28 @@ import { useState, useEffect } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 
 export function useNetworkStatus() {
-  const [isOnline, setIsOnline] = useState(true);
+  const [isOnline, setIsOnline] = useState(true); // Assume online initially to prevent flashing
 
   useEffect(() => {
     let active = true;
 
     const checkStatus = async () => {
+      let id: ReturnType<typeof setTimeout> | undefined;
       try {
         const controller = new AbortController();
-        const id = setTimeout(() => controller.abort(), 3000);
-        
+        id = setTimeout(() => controller.abort(), 10000); // 10s timeout for weak networks
+
         // Use a simple, lightweight request to check internet connection
         await fetch('https://clients3.google.com/generate_204', {
           method: 'GET',
           signal: controller.signal,
           headers: { 'Cache-Control': 'no-cache' }
         });
-        
+
         clearTimeout(id);
         if (active) setIsOnline(true);
       } catch (e) {
-        clearTimeout(0); // Safely ignore or log error
+        clearTimeout(id);
         if (active) setIsOnline(false);
       }
     };

@@ -63,11 +63,15 @@ export default function DashboardScreen() {
     reader
   });
 
-  // Re-fetch when dashboard comes into focus (if online)
+  // Re-fetch when dashboard comes into focus — but only if data is stale (>5 min)
   useFocusEffect(
     useCallback(() => {
-      refresh();
-    }, [refresh])
+      const STALE_MS = 5 * 60 * 1000;
+      const lastSyncTs = lastSync ? new Date(lastSync).getTime() : 0;
+      if (Date.now() - lastSyncTs > STALE_MS) {
+        refresh();
+      }
+    }, [refresh, lastSync])
   );
 
   const loans = data?.loans ?? [];

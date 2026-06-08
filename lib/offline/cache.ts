@@ -127,3 +127,17 @@ export async function clearOfflineCache() {
     console.error('Failed to clear offline cache', e);
   }
 }
+
+/**
+ * Invalidates only the loans portion of the cache.
+ * Call after createLoan / updateLoan / deleteLoan so the next offline
+ * read does not serve stale data. Profile and snapshots are preserved.
+ */
+export async function clearCachedLoans() {
+  try {
+    await AsyncStorage.multiRemove([KEY_LOANS, KEY_LOANS_WITH_PAYMENTS]);
+  } catch (e) {
+    console.error('Failed to clear loan cache', e);
+  }
+}
+

@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity } from 'react-native';
 import { Colors, Spacing, Radius, Shadows } from '@/constants/theme';
 import { Sparkles, Lock, Check, TrendingDown, ArrowRight } from 'lucide-react-native';
-import { getLoans } from '@/services/loans';
+import { getLoans, type LoanRecord } from '@/services/loans';
 import { getProfile, type FinancialProfile } from '@/services/profile';
 import { detectInterestLeaks, predictDefaultRisk, monthsSince, formatCurrency } from '@/lib/calculations';
 import { MetricCard } from '@/components/ui/MetricCard';
@@ -11,41 +11,49 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import Typography from '@/components/ui/Typography';
 import { useRouter } from 'expo-router';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { useOfflineData } from '@/hooks/useOfflineData';
+import {
+  saveOfflineLoans, getOfflineLoans,
+  saveOfflineProfile, getOfflineProfile,
+} from '@/lib/offline/cache';
+import OfflineBanner from '@/components/ui/OfflineBanner';
 
 export default function InsightsScreen() {
   const router = useRouter();
-  const [loans, setLoans] = useState<any[]>([]);
-  const [profile, setProfile] = useState<FinancialProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
 
-  const loadData = useCallback(async () => {
-    try {
-      const [loansData, profileData] = await Promise.all([getLoans(), getProfile()]);
-      setLoans(loansData);
-      setProfile(profileData);
-    } catch (err) {
-      console.error('Failed to load insights data:', err);
-    }
+  const fetcher = useCallback(async (): Promise<{ loans: LoanRecord[]; profile: FinancialProfile | null }> => {
+    const [loansData, profileData] = await Promise.all([getLoans(), getProfile()]);
+    return { loans: loansData, profile: profileData };
   }, []);
 
-  useEffect(() => {
-    loadData().finally(() => setLoading(false));
-  }, [loadData]);
+  const cacher = useCallback(async (data: { loans: LoanRecord[]; profile: FinancialProfile | null }) => {
+    await saveOfflineLoans(data.loans);
+    if (data.profile) await saveOfflineProfile(data.profile);
+  }, []);
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await loadData();
-    setRefreshing(false);
-  };
+  const reader = useCallback(async (): Promise<{ loans: LoanRecord[]; profile: FinancialProfile | null }> => {
+    const loans = await getOfflineLoans();
+    const profile = await getOfflineProfile();
+    return { loans, profile };
+  }, []);
+
+  const { data, loading, refreshing, isOffline, lastSync, refresh } = useOfflineData<{ loans: LoanRecord[]; profile: FinancialProfile | null }>({
+    fetcher,
+    cacher,
+    reader,
+  });
+
+  const loans: LoanRecord[] = data?.loans ?? [];
+  const profile: FinancialProfile | null = data?.profile ?? null;
 
   const currencyCode = profile?.currency ?? 'INR';
 
   const totals = useMemo(() => {
     const outstanding = loans.reduce((sum, loan) => sum + loan.outstandingBalance, 0);
     const emi = loans.reduce((sum, loan) => sum + loan.emiAmount, 0);
-    const avgRate = loans.length > 0
-      ? loans.reduce((sum, loan) => sum + loan.interestRate, 0) / loans.length
+    // Use balance-weighted average (consistent with dashboard.tsx)
+    const avgRate = outstanding > 0
+      ? loans.reduce((sum, loan) => sum + loan.interestRate * loan.outstandingBalance, 0) / outstanding
       : 0;
     return { outstanding, emi, avgRate };
   }, [loans]);
@@ -127,30 +135,40 @@ export default function InsightsScreen() {
 
   if (loans.length === 0) {
     return (
-      <ScrollView 
-        style={styles.container} 
-        contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.emerald} />}
-      >
-        <HeroSection totals={totals} currencyCode={currencyCode} />
-        <Card>
-          <EmptyState
-            icon={<Sparkles size={20} color={Colors.slate} />}
-            title="Add a loan to unlock insights"
-            description="Insights are generated from your live loan data. Add your first loan to see risk watchlists and leak detection." 
-            action={{ label: "Add your first loan", href: "/(drawer)/(tabs)/dashboard" }}
-          />
-        </Card>
-      </ScrollView>
-    );
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={Colors.emerald} />}
+    >
+      {isOffline && (
+        <View style={{ marginBottom: Spacing.base }}>
+          <OfflineBanner lastSync={lastSync} />
+        </View>
+      )}
+      <HeroSection totals={totals} currencyCode={currencyCode} />
+      <Card>
+        <EmptyState
+          icon={<Sparkles size={20} color={Colors.slate} />}
+          title="Add a loan to unlock insights"
+          description="Insights are generated from your live loan data. Add your first loan to see risk watchlists and leak detection."
+          action={isOffline ? undefined : { label: 'Add your first loan', href: '/(drawer)/(tabs)/dashboard' }}
+        />
+      </Card>
+    </ScrollView>
+  );
   }
 
   return (
-    <ScrollView 
-      style={styles.container} 
+    <ScrollView
+      style={styles.container}
       contentContainerStyle={styles.content}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.emerald} />}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={Colors.emerald} />}
     >
+      {isOffline && (
+        <View style={{ marginBottom: Spacing.base }}>
+          <OfflineBanner lastSync={lastSync} />
+        </View>
+      )}
       <HeroSection totals={totals} currencyCode={currencyCode} />
 
       {!profile ? (
@@ -163,9 +181,9 @@ export default function InsightsScreen() {
               </Typography>
             </View>
             {[
-              { label: "Monthly income and expenses", done: false },
-              { label: "Emergency fund status", done: false },
-              { label: "At least one active loan", done: loans.length > 0 },
+              { label: 'Monthly income and expenses', done: false },
+              { label: 'Emergency fund status', done: false },
+              { label: 'At least one active loan', done: loans.length > 0 },
             ].map((item, i) => (
               <View key={i} style={styles.lockItem}>
                 <View style={[styles.checkCircle, item.done && styles.checkCircleDone]}>

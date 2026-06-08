@@ -1,15 +1,5 @@
 import { supabase } from '@/lib/supabase';
-
-// Utility to generate UUIDs for database inserts
-// This fixes the 'null value in column "id"' error when the DB lacks auto-generation defaults
-function uuidv4() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
-
+import { uuidv4 } from '@/lib/utils';
 
 export type LoanRecord = {
   id: string;
@@ -65,7 +55,8 @@ export type PaymentInput = {
 };
 
 export async function getLoans(): Promise<LoanRecord[]> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
   if (!user) return [];
 
   const { data, error } = await supabase
@@ -82,7 +73,8 @@ export async function getLoans(): Promise<LoanRecord[]> {
 }
 
 export async function getLoan(id: string): Promise<LoanRecord | null> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
   if (!user) return null;
 
   const { data, error } = await supabase
@@ -107,7 +99,8 @@ export async function getLoan(id: string): Promise<LoanRecord | null> {
 }
 
 export async function createLoan(input: LoanInput) {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
   if (!user) return { error: 'You must be logged in to add a loan.' };
 
   const now = new Date().toISOString();
@@ -138,7 +131,8 @@ export async function createLoan(input: LoanInput) {
 }
 
 export async function updateLoan(id: string, input: LoanInput) {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
   if (!user) return { error: 'You must be logged in to update a loan.' };
 
   const { error } = await supabase
@@ -169,7 +163,8 @@ export async function updateLoan(id: string, input: LoanInput) {
 }
 
 export async function deleteLoan(id: string) {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
   if (!user) return { error: 'You must be logged in to delete a loan.' };
 
   const { error } = await supabase
@@ -186,7 +181,8 @@ export async function deleteLoan(id: string) {
 }
 
 export async function recordPayment(loanId: string, input: PaymentInput) {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
   if (!user) return { error: 'You must be logged in to record a payment.' };
 
   // Get current loan
@@ -250,30 +246,22 @@ export async function getPayments(loanId: string) {
 }
 
 export async function getLoansWithPayments(): Promise<LoanRecord[]> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
   if (!user) return [];
 
-  const { data: loans, error } = await supabase
+  // Single query — Supabase PostgREST nested select avoids N+1 round-trips.
+  const { data, error } = await supabase
     .from('Loan')
-    .select('*')
+    .select('*, payments:Payment(*)')
     .eq('userId', user.id)
     .order('createdAt', { ascending: false });
 
   if (error) {
-    console.error('Failed to fetch loans:', error);
+    console.error('Failed to fetch loans with payments:', error);
     throw new Error(`Failed to fetch loans: ${error.message}`);
   }
 
-  const loansWithPayments = await Promise.all(
-    (loans || []).map(async (loan) => {
-      const { data: payments } = await supabase
-        .from('Payment')
-        .select('*')
-        .eq('loanId', loan.id)
-        .order('paymentDate', { ascending: false });
-      return { ...loan, payments: payments || [] };
-    })
-  );
-
-  return loansWithPayments as LoanRecord[];
+  return (data as LoanRecord[]) ?? [];
 }
+

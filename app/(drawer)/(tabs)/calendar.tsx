@@ -102,7 +102,11 @@ export default function CalendarScreen() {
       showsVerticalScrollIndicator={false}
     >
       {/* Offline Alert Banner */}
-      {isOffline && <OfflineBanner lastSync={lastSync} />}
+      {isOffline && (
+        <View style={{ marginBottom: Spacing.base }}>
+          <OfflineBanner lastSync={lastSync} />
+        </View>
+      )}
 
       <View style={styles.hero}>
         <View style={styles.badge}>
@@ -144,7 +148,7 @@ export default function CalendarScreen() {
             icon={<Info size={20} color={Colors.slate} />}
             title="No loans yet"
             description="Add loans to see your EMI due dates appear on the calendar."
-            action={{ label: "Add a loan", href: "/(drawer)/(tabs)/dashboard" }}
+            action={isOffline ? undefined : { label: "Add a loan", href: "/(drawer)/(tabs)/dashboard" }}
           />
         </Card>
       )}

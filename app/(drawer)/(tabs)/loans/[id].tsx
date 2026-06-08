@@ -1,10 +1,12 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import {
-  View, ScrollView, TouchableOpacity, Alert, StyleSheet, RefreshControl,
+  View, ScrollView, TouchableOpacity, Alert, StyleSheet, RefreshControl, Vibration,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { getLoan, deleteLoan, getLoans, type LoanRecord } from '@/services/loans';
 import { getProfile, type FinancialProfile } from '@/services/profile';
+import { clearCachedLoans, getOfflineLoans, getOfflineLoansWithPayments, getOfflineProfile } from '@/lib/offline/cache';
+import { useOfflineData } from '@/hooks/useOfflineData';
 import { loanHealthScore, monthsSince, formatCurrency, getCurrencyConfig } from '@/lib/calculations';
 import LoanHealthScoreBadge from '@/components/analysis/LoanHealthScoreBadge';
 import DefaultRiskCard from '@/components/ml/DefaultRiskCard';
@@ -20,37 +22,41 @@ import { Skeleton } from '@/components/ui/Skeleton';
 export default function LoanDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const [loan, setLoan] = useState<LoanRecord | null>(null);
-  const [profile, setProfile] = useState<FinancialProfile | null>(null);
-  const [totalEMI, setTotalEMI] = useState(0);
-  const [loansCount, setLoansCount] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-
-  const loadData = async () => {
-    if (id) {
-      try {
-        const [loanData, profileData, allLoans] = await Promise.all([
-          getLoan(id),
-          getProfile(),
-          getLoans()
-        ]);
-        setLoan(loanData);
-        setProfile(profileData);
-        if (allLoans) {
-          setTotalEMI(allLoans.reduce((sum, l) => sum + l.emiAmount, 0));
-          setLoansCount(allLoans.length);
-        }
-      } catch (err) {
-        console.error('Failed to load loan details:', err);
-      }
-    }
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    loadData();
+  const fetcher = useCallback(async () => {
+    if (!id) throw new Error('No id');
+    const [loanData, profileData, allLoans] = await Promise.all([
+      getLoan(id as string),
+      getProfile(),
+      getLoans()
+    ]);
+    return { loan: loanData, profile: profileData, allLoans };
   }, [id]);
+
+  const cacher = useCallback(async () => {}, []);
+
+  const reader = useCallback(async () => {
+    const allLoansWithPayments = await getOfflineLoansWithPayments();
+    let loanData = allLoansWithPayments.find(l => l.id === id);
+    if (!loanData) {
+      const allLoans = await getOfflineLoans();
+      loanData = allLoans.find(l => l.id === id);
+    }
+    const profileData = await getOfflineProfile();
+    const allLoansList = await getOfflineLoans();
+    return { loan: loanData || null, profile: profileData, allLoans: allLoansList };
+  }, [id]);
+
+  const { data, loading, refreshing, refresh, isOffline } = useOfflineData({ fetcher, cacher, reader });
+
+  const loan = data?.loan ?? null;
+  const profile = data?.profile ?? null;
+  const totalEMI = data?.allLoans?.reduce((sum, l) => sum + l.emiAmount, 0) ?? 0;
+  const loansCount = data?.allLoans?.length ?? 0;
+
+  const loadData = refresh; // For LogPaymentCard onSuccess
+
+  const onRefresh = () => refresh();
+
 
   const healthScore = useMemo(() => {
     if (!profile || !loan || !(profile.monthlyIncome > 0)) return null;
@@ -87,11 +93,7 @@ export default function LoanDetailScreen() {
     };
   }, [loan, profile, totalEMI, loansCount]);
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await loadData();
-    setRefreshing(false);
-  };
+
 
   const handleDelete = () => {
     Alert.alert('Delete Loan', 'Are you sure? This cannot be undone.', [
@@ -100,9 +102,16 @@ export default function LoanDetailScreen() {
         text: 'Delete', style: 'destructive',
         onPress: async () => {
           if (!id) return;
+          // Warning haptic feedback
+          Vibration.vibrate(60);
           const result = await deleteLoan(id);
-          if (result.success) router.back();
-          else Alert.alert('Error', result.error ?? 'Failed to delete');
+          if (result.success) {
+            // Invalidate the loan cache so the next offline read is fresh
+            await clearCachedLoans();
+            router.back();
+          } else {
+            Alert.alert('Error', result.error ?? 'Failed to delete');
+          }
         },
       },
     ]);
@@ -187,15 +196,20 @@ export default function LoanDetailScreen() {
     >
       <View style={s.headerActions}>
         <TouchableOpacity 
-          style={s.actionBtn} 
-          onPress={() => router.push({ pathname: '/(drawer)/(tabs)/loans/add', params: { id: loan.id } })}
+          style={[s.actionBtn, isOffline && { opacity: 0.5 }]} 
+          onPress={() => !isOffline && router.push({ pathname: '/(drawer)/(tabs)/loans/add', params: { id: loan.id } })}
+          disabled={isOffline}
         >
-          <Edit3 size={16} color={Colors.emerald} />
-          <Typography variant="caption" weight="bold" color="emerald">Edit loan</Typography>
+          <Edit3 size={16} color={isOffline ? Colors.slate : Colors.emerald} />
+          <Typography variant="caption" weight="bold" color={isOffline ? 'slate' : 'emerald'}>Edit loan</Typography>
         </TouchableOpacity>
-        <TouchableOpacity style={[s.actionBtn, s.deleteBtn]} onPress={handleDelete}>
-          <Trash2 size={16} color={Colors.red} />
-          <Typography variant="caption" weight="bold" color="red">Delete</Typography>
+        <TouchableOpacity 
+          style={[s.actionBtn, s.deleteBtn, isOffline && { opacity: 0.5 }]} 
+          onPress={() => !isOffline && handleDelete()} 
+          disabled={isOffline}
+        >
+          <Trash2 size={16} color={isOffline ? Colors.slate : Colors.red} />
+          <Typography variant="caption" weight="bold" color={isOffline ? 'slate' : 'red'}>Delete</Typography>
         </TouchableOpacity>
       </View>
 
@@ -243,7 +257,7 @@ export default function LoanDetailScreen() {
       />
 
       {/* Record Payment */}
-      <LogPaymentCard loanId={loan.id} defaultAmount={loan.emiAmount} onSuccess={loadData} currencyCode={loanCurrency} />
+      <LogPaymentCard loanId={loan.id} defaultAmount={loan.emiAmount} onSuccess={loadData} currencyCode={loanCurrency} isOffline={isOffline} />
 
       {/* Payment History */}
       <Card>

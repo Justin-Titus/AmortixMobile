@@ -1,12 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, ScrollView, TouchableOpacity, KeyboardAvoidingView,
-  Platform, StyleSheet, Alert,
+  Platform, StyleSheet, Alert, Vibration,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { createLoan, getLoan, updateLoan } from '@/services/loans';
 import { getProfile } from '@/services/profile';
+import { clearCachedLoans } from '@/lib/offline/cache';
 import { Input } from '@/components/ui/Input';
 import { Colors, Radius, Spacing, Shadows } from '@/constants/theme';
 import { calculateEMI, calculateTenure, CURRENCIES, getCurrencyConfig } from '@/lib/calculations';
@@ -39,6 +41,30 @@ export default function AddLoanScreen() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  // Track whether the user has modified any field so we can warn before discarding
+  const [isDirty, setIsDirty] = useState(false);
+  const navigation = useNavigation();
+
+  // Intercept back navigation when there are unsaved changes
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (e: any) => {
+      if (!isDirty || submitting) return; // Nothing to warn about
+      e.preventDefault();
+      Alert.alert(
+        'Discard changes?',
+        'You have unsaved changes. Are you sure you want to go back?',
+        [
+          { text: 'Keep editing', style: 'cancel' },
+          {
+            text: 'Discard',
+            style: 'destructive',
+            onPress: () => navigation.dispatch(e.data.action),
+          },
+        ]
+      );
+    });
+    return unsubscribe;
+  }, [navigation, isDirty, submitting]);
 
   useEffect(() => {
     const init = async () => {
@@ -141,11 +167,18 @@ export default function AddLoanScreen() {
     if ('error' in result && result.error) {
       setError(result.error);
     } else {
+      // Invalidate the loan cache so the next offline read is fresh
+      await clearCachedLoans();
+      // Reset dirty flag so back navigation doesn't trigger discard dialog
+      setIsDirty(false);
+      // Success haptic feedback
+      Vibration.vibrate(30);
       Alert.alert('Success', `Loan ${id ? 'updated' : 'added'} successfully!`, [
         { text: 'OK', onPress: () => router.back() },
       ]);
     }
     setSubmitting(false);
+
   };
 
   if (loading) {
@@ -175,9 +208,8 @@ export default function AddLoanScreen() {
   const currentConfig = getCurrencyConfig(currency);
 
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
-      enabled={Platform.OS === 'ios'} 
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={s.container}
     >
       <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
@@ -197,13 +229,13 @@ export default function AddLoanScreen() {
           </View>
         )}
         
-        <Input 
-          label="LOAN NAME" 
-          placeholder="e.g. Home Loan - SBI" 
-          value={name} 
-          onChangeText={(v) => { setName(v); if(fieldErrors.name) setFieldErrors({...fieldErrors, name: ''}); }} 
+        <Input
+          label="LOAN NAME"
+          placeholder="e.g. Home Loan - SBI"
+          value={name}
+          onChangeText={(v) => { setName(v); setIsDirty(true); if (fieldErrors.name) setFieldErrors({ ...fieldErrors, name: '' }); }}
           error={fieldErrors.name}
-          containerStyle={s.gap} 
+          containerStyle={s.gap}
         />
 
         <Typography variant="xs" weight="bold" color="navy" fontFamily="heading" style={s.label}>

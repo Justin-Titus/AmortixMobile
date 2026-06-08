@@ -22,59 +22,38 @@ export function useOfflineData<T>({ fetcher, cacher, reader }: UseOfflineDataOpt
       setLoading(true);
     }
 
-    let initialCacheLoaded = false;
-    if (!isRefresh) {
+    // --- Step 1: Always load from cache first ---
+    // This guarantees data is shown immediately even while a network
+    // request is in flight, and is the sole source of truth when offline.
+    try {
+      const cachedData = await reader();
+      const syncTime = await getLastSyncTime();
+      // Only surface cached data if we actually have a prior sync timestamp,
+      // which proves data was saved previously (not a first-run empty state).
+      if (syncTime) {
+        setData(cachedData);
+        setLastSync(syncTime);
+      }
+    } catch (e) {
+      console.error('Failed to pre-load cached data', e);
+    }
+
+    // --- Step 2: Fetch live data only when online ---
+    if (isOnline) {
       try {
-        const cachedData = await reader();
+        const onlineData = await fetcher();
+        setData(onlineData);
+        await cacher(onlineData);
         const syncTime = await getLastSyncTime();
-        if (cachedData && syncTime) {
-          setData(cachedData);
-          initialCacheLoaded = true;
-          setLastSync(syncTime);
-          setLoading(false);
-        }
+        setLastSync(syncTime);
       } catch (e) {
-        console.error('Failed to pre-load cached data', e);
+        console.error('Failed to fetch online data, falling back to cache', e);
+        // Cache is already set in Step 1, so no extra action needed.
       }
     }
 
-    try {
-      if (isOnline) {
-        // Fetch online data
-        const onlineData = await fetcher();
-        setData(onlineData);
-        // Cache it offline
-        await cacher(onlineData);
-      } else {
-        // Fetch offline data
-        const cachedData = await reader();
-        setData(cachedData);
-      }
-      
-      const syncTime = await getLastSyncTime();
-      setLastSync(syncTime);
-    } catch (e) {
-      console.error('Failed to load offline-enabled data', e);
-      // Fallback to cache if error occurs on fetch
-      if (!initialCacheLoaded) {
-        try {
-          const cachedData = await reader();
-          setData(cachedData);
-        } catch (cacheErr) {
-          console.error('Failed to load from cache fallback', cacheErr);
-        }
-      }
-      // Ensure we still load the last sync time when offline/error
-      try {
-        const syncTime = await getLastSyncTime();
-        setLastSync(syncTime);
-      } catch (syncErr) {
-        console.error('Failed to get sync time in catch block', syncErr);
-      }
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
+    setLoading(false);
+    setRefreshing(false);
   }, [isOnline, fetcher, cacher, reader]);
 
   useEffect(() => {

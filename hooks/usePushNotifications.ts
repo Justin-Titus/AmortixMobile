@@ -63,7 +63,8 @@ export function usePushNotifications() {
       setExpoPushToken(token);
 
       // Save token to Supabase User Profile
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user;
       if (user) {
         const { error } = await supabase
           .from('User')
