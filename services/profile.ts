@@ -41,6 +41,8 @@ export async function getProfile(): Promise<FinancialProfile | null> {
   return data as FinancialProfile;
 }
 
+import { uuidv4 } from '@/lib/utils';
+
 export async function updateProfile(input: {
   monthlyIncome?: number;
   monthlyExpenses?: number;
@@ -54,13 +56,16 @@ export async function updateProfile(input: {
   const user = session?.user;
   if (!user) return { error: 'Unauthorized' };
 
-  // NOTE: id is intentionally omitted from the upsert payload.
-  // On INSERT (no existing profile), the DB default generates a UUID.
-  // On UPDATE (onConflict: 'userId'), Supabase preserves the existing id.
-  // Previously passing id: uuidv4() would overwrite the primary key on every save.
+  // Fetch existing profile to get its ID, or generate a new one if it doesn't exist.
+  // This avoids the 'null value in column "id" violates not-null constraint' error
+  // while preventing overwriting the primary key on updates.
+  const existingProfile = await getProfile();
+  const profileId = existingProfile?.id || uuidv4();
+
   const { error } = await supabase
     .from('FinancialProfile')
     .upsert({
+      id: profileId,
       userId: user.id,
       monthlyIncome: input.monthlyIncome ?? 0,
       monthlyExpenses: input.monthlyExpenses ?? 0,
