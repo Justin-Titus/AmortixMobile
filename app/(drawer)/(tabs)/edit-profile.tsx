@@ -13,7 +13,7 @@ import { CURRENCIES, getCurrencyConfig } from '@/lib/calculations';
 import { Skeleton } from '@/components/ui/Skeleton';
 
 const employmentTypes = ['SALARIED', 'SELF_EMPLOYED', 'BUSINESS_OWNER', 'STUDENT', 'OTHER'];
-const creditScoreRanges = ['800+', '750-800', '700-750', '650-700', 'Below-650'];
+const creditScoreRanges = ['800+', '750-800', '700-750', '650-700', 'below 650'];
 
 export default function EditProfileScreen() {
   const router = useRouter();

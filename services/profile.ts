@@ -69,7 +69,7 @@ export async function updateProfile(input: {
       userId: user.id,
       monthlyIncome: input.monthlyIncome ?? 0,
       monthlyExpenses: input.monthlyExpenses ?? 0,
-      creditScoreRange: input.creditScoreRange ?? '700-749',
+      creditScoreRange: input.creditScoreRange ?? '700-750',
       employmentType: input.employmentType ?? 'SALARIED',
       hasEmergencyFund: input.hasEmergencyFund ?? false,
       emergencyFundMonths: input.emergencyFundMonths ?? 0,
