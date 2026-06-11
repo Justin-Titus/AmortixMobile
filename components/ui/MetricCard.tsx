@@ -46,7 +46,7 @@ export function MetricCard({
         {isEmpty ? '-' : value}
       </Typography>
       {description && (
-        <Typography variant="xs" color="textMuted" numberOfLines={1} style={styles.description}>
+        <Typography variant="xs" color="textMuted" numberOfLines={2} style={styles.description}>
           {description}
         </Typography>
       )}

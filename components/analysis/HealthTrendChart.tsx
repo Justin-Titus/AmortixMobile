@@ -65,7 +65,7 @@ export function getTrendInsight(snapshots: HealthSnapshotPoint[]): string {
     return `Your financial health improved by ${deltaScore.toFixed(0)} points. You're building solid momentum.`;
   }
   if (deltaScore < -5) {
-    return `Your health score dropped ${Math.abs(deltaScore).toFixed(0)} points. Consider identifying interest leaks.`;
+    return `Your health score dropped ${Math.abs(deltaScore).toFixed(0)} points. Consider identifying avoidable interest costs.`;
   }
   if (deltaDTI < -5) {
     return 'Your health score is stable, but your Debt-to-Income ratio is improving. Good progress!';

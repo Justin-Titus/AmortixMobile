@@ -19,7 +19,7 @@ import {
   saveOfflineSnapshots, getOfflineSnapshots
 } from '@/lib/offline/cache';
 import OfflineBanner from '@/components/ui/OfflineBanner';
-import { formatCurrency, formatCompactCurrency, calculateAffordabilityScore, calculateStrategy, getCurrencyConfig } from '@/lib/calculations';
+import { formatCurrency, formatCompactCurrency, calculateAffordabilityScore, calculateStrategy, getCurrencyConfig, getProjectedPayoffDate } from '@/lib/calculations';
 import {
   Sparkles, ArrowRight, Plus, MessageSquarePlus, AlertTriangle,
 } from 'lucide-react-native';
@@ -86,9 +86,8 @@ export default function DashboardScreen() {
   const avgRate = totalOutstanding > 0
     ? loans.reduce((s, l) => s + l.interestRate * l.outstandingBalance, 0) / totalOutstanding : 0;
   const hasLoans = loans.length > 0;
-  const projectedMonths = totalEMI > 0 ? Math.max(1, Math.ceil(totalOutstanding / totalEMI)) : 0;
-  const debtFreeDate = projectedMonths > 0
-    ? new Date(new Date().setMonth(new Date().getMonth() + projectedMonths)) : null;
+  const debtFreeDate = hasLoans ? getProjectedPayoffDate(loans) : null;
+  const projectedMonths = debtFreeDate ? Math.max(0, (debtFreeDate.getFullYear() - new Date().getFullYear()) * 12 + debtFreeDate.getMonth() - new Date().getMonth()) : 0;
 
   const emiToIncomeRatio = profile?.monthlyIncome
     ? Math.round((totalEMI / profile.monthlyIncome) * 100) : 0;
@@ -207,6 +206,13 @@ export default function DashboardScreen() {
           ))}
         </View>
 
+        {/* Health Trend Chart Skeleton */}
+        <Card>
+          <Skeleton width={150} height={20} style={{ marginBottom: Spacing.sm }} />
+          <Skeleton width={220} height={14} style={{ marginBottom: Spacing.md }} />
+          <Skeleton width="100%" height={180} borderRadius={Radius.lg} />
+        </Card>
+
         <Card>
           <Skeleton width={120} height={20} style={{ marginBottom: 6 }} />
           <Skeleton width={200} height={14} style={{ marginBottom: Spacing.md }} />
@@ -223,6 +229,45 @@ export default function DashboardScreen() {
               <Skeleton width="100%" height={4} borderRadius={2} />
             </View>
           ))}
+        </Card>
+
+        {/* Analytics Row Skeleton (Affordability + Distribution) */}
+        <View style={s.analyticsRow}>
+          <Card style={s.affordabilityCard}>
+            <Skeleton width={150} height={20} style={{ marginBottom: 6 }} />
+            <Skeleton width={200} height={14} style={{ marginBottom: Spacing.lg }} />
+            <View style={{ alignItems: 'center', marginVertical: Spacing.md }}>
+              <Skeleton width={140} height={140} borderRadius={70} />
+            </View>
+            <View style={{ marginTop: Spacing.md }}>
+              {[1, 2, 3].map(i => (
+                <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: Spacing.sm, borderBottomWidth: 1, borderBottomColor: Colors.borderLight }}>
+                  <Skeleton width={100} height={12} />
+                  <Skeleton width={60} height={12} />
+                </View>
+              ))}
+            </View>
+          </Card>
+
+          <Card style={s.distributionCard}>
+            <Skeleton width={120} height={20} style={{ marginBottom: 6 }} />
+            <Skeleton width={180} height={14} style={{ marginBottom: Spacing.xl }} />
+            <View style={{ alignItems: 'center', justifyContent: 'center', height: 180 }}>
+              <Skeleton width={140} height={140} borderRadius={70} />
+            </View>
+          </Card>
+        </View>
+
+        {/* AI Insight Card Skeleton */}
+        <Card style={s.aiCard}>
+          <View style={{ flexDirection: 'row', gap: Spacing.md }}>
+            <Skeleton width={44} height={44} borderRadius={14} />
+            <View style={{ flex: 1, gap: 6 }}>
+              <Skeleton width={100} height={18} />
+              <Skeleton width="100%" height={14} />
+              <Skeleton width="80%" height={14} />
+            </View>
+          </View>
         </Card>
       </ScrollView>
     );
@@ -311,7 +356,7 @@ export default function DashboardScreen() {
           valueColor={avgRate > 12 ? 'amber' : 'default'} />
         <MetricCard label="Debt-free by"
           value={debtFreeDate ? debtFreeDate.toLocaleDateString(currencyConfig.locale, { month: 'short', year: 'numeric' }) : '-'}
-          description={debtFreeDate ? 'With current strategy' : 'Add loans to see'}
+          description={debtFreeDate ? 'Baseline strategy' : 'Add loans to see'}
           isEmpty={!hasLoans} style={s.metricHalf} valueColor={debtFreeDate ? 'amber' : 'muted'} />
       </View>
 

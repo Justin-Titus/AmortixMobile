@@ -136,6 +136,56 @@ export default function StrategyScreen() {
           <Card>
             <Skeleton width="100%" height={200} />
           </Card>
+
+          {/* Select Strategy Toggle Skeleton */}
+          <Skeleton width={120} height={18} style={{ marginTop: Spacing.md, marginBottom: Spacing.sm }} />
+          <View style={{ flexDirection: 'row', gap: Spacing.md, marginBottom: Spacing.xs }}>
+            {[1, 2, 3].map(i => (
+              <Card key={i} style={{ flex: 1, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, minWidth: 140 }}>
+                <Skeleton width={30} height={16} style={{ marginBottom: 6 }} />
+                <Skeleton width={80} height={16} />
+              </Card>
+            ))}
+          </View>
+
+          {/* Priority Order Card Skeleton */}
+          <Card>
+            <Skeleton width={120} height={20} style={{ marginBottom: Spacing.xs }} />
+            <Skeleton width="100%" height={14} style={{ marginBottom: Spacing.md }} />
+            {[1, 2, 3].map(i => (
+              <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingVertical: Spacing.md, borderBottomWidth: 1, borderBottomColor: Colors.borderLight }}>
+                <Skeleton width={32} height={32} borderRadius={10} />
+                <View style={{ flex: 1, gap: 4 }}>
+                  <Skeleton width={100} height={16} />
+                  <Skeleton width={140} height={12} />
+                </View>
+                <Skeleton width={50} height={20} borderRadius={10} />
+              </View>
+            ))}
+          </Card>
+
+          {/* PDF Export Button Skeleton */}
+          <Skeleton width="100%" height={48} borderRadius={Radius.button} />
+
+          {/* Amortization Table Card Skeleton */}
+          <Card>
+            <Skeleton width={160} height={20} style={{ marginBottom: Spacing.xs }} />
+            <Skeleton width={220} height={14} style={{ marginBottom: Spacing.lg }} />
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: Spacing.md, borderBottomWidth: 1, borderBottomColor: Colors.borderLight, paddingBottom: 8 }}>
+              <Skeleton width={40} height={14} />
+              <Skeleton width={60} height={14} />
+              <Skeleton width={60} height={14} />
+              <Skeleton width={60} height={14} />
+            </View>
+            {[1, 2, 3, 4, 5].map(i => (
+              <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: Spacing.sm, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' }}>
+                <Skeleton width={30} height={14} />
+                <Skeleton width={60} height={14} />
+                <Skeleton width={60} height={14} />
+                <Skeleton width={60} height={14} />
+              </View>
+            ))}
+          </Card>
         </ScrollView>
       </View>
     );
@@ -219,6 +269,21 @@ export default function StrategyScreen() {
               </View>
             )}
 
+            {/* Rollover Magic Explanation */}
+            {activeResult && loans.length >= 2 && (
+              <View style={{ marginTop: Spacing.md, padding: Spacing.md, backgroundColor: '#ecfdf5', borderRadius: Radius.card, borderWidth: 1, borderColor: '#a7f3d0', flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm }}>
+                <View style={{ backgroundColor: '#d1fae5', padding: 4, borderRadius: 100, marginTop: 2 }}>
+                  <Zap size={16} color="#059669" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Typography variant="sm" weight="bold" style={{ color: '#064e3b', marginBottom: 4 }}>The "Rollover" Magic</Typography>
+                  <Typography variant="xs" style={{ color: '#065f46', lineHeight: 18 }}>
+                    How are you saving so much without adding extra budget? When one loan finishes, its monthly payment is automatically rolled over into your next loan. You keep paying the exact same total amount out-of-pocket every month, but you crush your debt years earlier!
+                  </Typography>
+                </View>
+              </View>
+            )}
+
             {/* Strategy Comparison Chart */}
             {results && (
               <StrategyComparisonChart data={chartData} activeStrategy={strategy} currencyCode={currencyCode} />
@@ -280,6 +345,18 @@ export default function StrategyScreen() {
                 </View>
               </TouchableOpacity>
             </ScrollView>
+
+            {results && results.avalanche.totalInterestPaid === results.snowball.totalInterestPaid && results.avalanche.totalInterestPaid === results.hybrid.totalInterestPaid && (
+              <View style={{ marginTop: Spacing.md, padding: Spacing.md, backgroundColor: '#eff6ff', borderRadius: Radius.card, borderWidth: 1, borderColor: '#bfdbfe', flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm }}>
+                <Target size={20} color="#3b82f6" style={{ marginTop: 2 }} />
+                <View style={{ flex: 1 }}>
+                  <Typography variant="sm" weight="bold" style={{ color: '#1e3a8a', marginBottom: 4 }}>Why are the results identical?</Typography>
+                  <Typography variant="xs" style={{ color: '#1d4ed8', lineHeight: 18 }}>
+                    Your smallest balance loan also has the highest interest rate! Because of this, both Avalanche and Snowball target the exact same loan first, producing identical payoff paths.
+                  </Typography>
+                </View>
+              </View>
+            )}
 
             {/* Priority Order */}
             <Card>

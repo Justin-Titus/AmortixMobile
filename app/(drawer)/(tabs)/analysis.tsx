@@ -102,6 +102,34 @@ export default function AnalysisScreen() {
           ))}
         </View>
 
+        {/* Avoidable Interest Analysis Skeleton */}
+        <Card>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+            <Skeleton width={18} height={18} borderRadius={9} />
+            <Skeleton width={180} height={18} />
+          </View>
+          <Skeleton width={220} height={12} style={{ marginBottom: Spacing.lg }} />
+          
+          {[1, 2].map(i => (
+            <View key={i} style={{ marginBottom: Spacing.md, paddingBottom: Spacing.md, borderBottomWidth: 1, borderBottomColor: Colors.borderLight }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+                <Skeleton width={100} height={14} />
+                <Skeleton width={40} height={14} />
+              </View>
+              <Skeleton width={70} height={12} style={{ marginBottom: 8 }} />
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <Skeleton width="85%" height={8} borderRadius={4} />
+                <Skeleton width={25} height={12} />
+              </View>
+            </View>
+          ))}
+
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: Spacing.sm }}>
+            <Skeleton width={120} height={14} />
+            <Skeleton width={90} height={22} />
+          </View>
+        </Card>
+
         <Card>
           <Skeleton width={150} height={24} style={{ marginBottom: Spacing.md }} />
           {[1, 2, 3, 4, 5].map(i => (
@@ -155,8 +183,8 @@ export default function AnalysisScreen() {
             <MetricCard label="Monthly surplus" value={formatCurrency(Math.max(0, surplus), currencyCode)}
               valueColor={surplus < 0 ? 'red' : 'emerald'}
               description={surplus < 0 ? 'Deficit detected' : 'After EMI + expenses'} style={s.half} />
-            <MetricCard label="Interest leak" value={formatCurrency(totalInterestPerMonth, currencyCode)}
-              description="Monthly interest paid" valueColor="amber" style={s.half} />
+            <MetricCard label="Monthly interest cost" value={formatCurrency(totalInterestPerMonth, currencyCode)}
+              description="Total interest expense" valueColor="amber" style={s.half} />
             <MetricCard label="High-risk loans" value={highRiskLoans.length}
               description={`Loans above 15% rate`}
               valueColor={highRiskLoans.length > 0 ? 'red' : 'emerald'} style={s.half} />
@@ -210,6 +238,6 @@ const s = StyleSheet.create({
   metricsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.md },
   half: { width: '47%', flexGrow: 1 },
   sectionTitle: { marginBottom: Spacing.sm },
-  profileRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: Spacing.md, borderBottomWidth: 1 },
+  profileRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: Spacing.md, borderBottomWidth: 1, borderBottomColor: Colors.borderLight },
 });
 

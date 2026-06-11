@@ -14,12 +14,12 @@ export type NotificationRecord = {
 export async function getNotifications(): Promise<NotificationRecord[]> {
   const { data: { session }, error: authError } = await supabase.auth.getSession();
   const user = session?.user;
-  if (authError || !user?.user) throw new Error('User not authenticated');
+  if (authError || !user) throw new Error('User not authenticated');
 
   const { data, error } = await supabase
     .from('Notification')
     .select('*')
-    .eq('userId', user.user.id)
+    .eq('userId', user.id)
     .order('createdAt', { ascending: false });
 
   if (error) throw error;
@@ -38,12 +38,12 @@ export async function markAsRead(notificationId: string): Promise<void> {
 export async function markAllAsRead(): Promise<void> {
   const { data: { session }, error: authError } = await supabase.auth.getSession();
   const user = session?.user;
-  if (authError || !user?.user) throw new Error('User not authenticated');
+  if (authError || !user) throw new Error('User not authenticated');
 
   const { error } = await supabase
     .from('Notification')
     .update({ isRead: true })
-    .eq('userId', user.user.id)
+    .eq('userId', user.id)
     .eq('isRead', false);
 
   if (error) throw error;

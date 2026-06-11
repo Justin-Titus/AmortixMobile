@@ -25,14 +25,15 @@ export interface ScoreBreakdown {
 
 export interface AffordabilityResult {
   score: number;
-  zone: "healthy" | "moderate" | "high-risk";
+  zone: "excellent" | "healthy" | "watch" | "high-risk";
   breakdown: ScoreBreakdown[];
 }
 
 export function getAffordabilityZoneLabel(score: number): string {
-  if (score >= 75) return "Healthy zone";
-  if (score >= 50) return "Watch zone";
-  return "Risk zone";
+  if (score >= 80) return "Excellent";
+  if (score >= 60) return "Healthy";
+  if (score >= 40) return "Watch";
+  return "High Risk";
 }
 
 export function calculateAffordabilityScore(
@@ -178,11 +179,13 @@ export function calculateAffordabilityScore(
   score = Math.max(0, Math.min(100, score));
 
   // Determine zone
-  let zone: "healthy" | "moderate" | "high-risk";
-  if (score >= 75) {
+  let zone: "excellent" | "healthy" | "watch" | "high-risk";
+  if (score >= 80) {
+    zone = "excellent";
+  } else if (score >= 60) {
     zone = "healthy";
-  } else if (score >= 50) {
-    zone = "moderate";
+  } else if (score >= 40) {
+    zone = "watch";
   } else {
     zone = "high-risk";
   }

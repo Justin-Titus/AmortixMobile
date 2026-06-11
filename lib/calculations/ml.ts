@@ -39,6 +39,9 @@ export interface DefaultRiskResult {
   riskScore: number;
   topFactors: RiskFactor[];
   recommendation: string;
+  scoreExplanation: string;
+  confidenceScore: number;
+  reasoningText: string;
 }
 
 const WEIGHTS = [0.28, 0.22, 0.18, 0.12, 0.08, 0.07, 0.15, 0.06, 0.09, 0.1] as const;
@@ -103,14 +106,34 @@ export function predictDefaultRisk(input: DefaultRiskInput, currencyCode: string
   const probability = sigmoid(logit);
   const riskScore = Math.round(probability * 100);
 
-  const riskLevel =
-    probability < 0.15
-      ? "low"
-      : probability < 0.35
-        ? "medium"
-        : probability < 0.6
-          ? "high"
-          : "critical";
+  let riskLevel: "low" | "medium" | "high" | "critical";
+  let scoreExplanation = "";
+  
+  const loanTypeName = input.loanType?.toLowerCase() || "";
+  const isHome = loanTypeName.includes("home") || loanTypeName.includes("mortgage");
+  const isVehicle = loanTypeName.includes("car") || loanTypeName.includes("vehicle") || loanTypeName.includes("auto");
+  const isPersonal = loanTypeName.includes("personal") || loanTypeName.includes("emergency");
+
+  if (isHome && input.interestRate < 9) {
+    riskLevel = "low";
+    scoreExplanation = "Home loans under 9% interest carry low intrinsic risk.";
+  } else if (isVehicle && input.interestRate >= 8 && input.interestRate <= 11) {
+    riskLevel = probability > 0.4 ? "medium" : "low";
+    scoreExplanation = "Standard vehicle loan rates present manageable risk if EMI is affordable.";
+  } else if (isPersonal && input.interestRate > 12) {
+    riskLevel = probability > 0.5 ? "high" : "medium";
+    scoreExplanation = "High-interest personal loans significantly increase repayment risk.";
+  } else {
+    riskLevel =
+      probability < 0.15
+        ? "low"
+        : probability < 0.35
+          ? "medium"
+          : probability < 0.6
+            ? "high"
+            : "critical";
+    scoreExplanation = "Risk based on your overall debt profile and interest burden.";
+  }
 
   const factorContributions = [
     {
@@ -198,12 +221,19 @@ export function predictDefaultRisk(input: DefaultRiskInput, currencyCode: string
       "Immediate action needed - contact your lender about restructuring before missing an EMI.",
   };
 
+  const confidenceScore = Math.round(Math.max(60, 100 - (features[0] * 20) + (input.hasEmergencyFund ? 10 : 0)));
+  
+  const reasoningText = `${riskLevel.charAt(0).toUpperCase() + riskLevel.slice(1)} risk because interest is ${input.interestRate}% and EMI burden is ${features[1] > 0.4 ? 'above' : 'below'} optimal threshold. ${scoreExplanation}`;
+
   return {
     probability,
     riskLevel,
     riskScore,
     topFactors,
     recommendation: recommendationByLevel[riskLevel],
+    scoreExplanation,
+    confidenceScore,
+    reasoningText,
   };
 }
 

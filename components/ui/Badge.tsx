@@ -21,6 +21,7 @@ export function Badge({ text, variant = 'slate', style }: BadgeProps) {
 
 const styles = StyleSheet.create({
   base: {
+    alignSelf: 'flex-start',
     borderRadius: 9999,
     paddingHorizontal: 10,
     paddingVertical: 4,

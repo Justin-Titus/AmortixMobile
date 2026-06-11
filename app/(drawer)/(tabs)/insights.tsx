@@ -125,10 +125,41 @@ export default function InsightsScreen() {
           </View>
         </View>
 
-        <Card style={{ marginBottom: Spacing.md }}>
-          <Skeleton width={150} height={20} style={{ marginBottom: Spacing.md }} />
-          <Skeleton width="100%" height={80} />
-        </Card>
+        {/* Risk Watchlist Skeleton */}
+        <View style={{ gap: Spacing.md, marginBottom: Spacing.lg }}>
+          <Skeleton width={120} height={18} style={{ marginLeft: 4 }} />
+          {[1, 2].map(i => (
+            <Card key={i} style={styles.riskCard}>
+              <View style={styles.riskHeader}>
+                <View style={{ flex: 1, gap: 6 }}>
+                  <Skeleton width={120} height={18} />
+                  <Skeleton width={80} height={12} />
+                </View>
+                <Skeleton width={44} height={44} borderRadius={22} />
+              </View>
+              <Skeleton width="100%" height={32} borderRadius={Radius.md} />
+            </Card>
+          ))}
+        </View>
+
+        {/* Avoidable Interest Priority Skeleton */}
+        <View style={{ gap: Spacing.md }}>
+          <Skeleton width={180} height={18} style={{ marginLeft: 4 }} />
+          {[1, 2].map(i => (
+            <Card key={i} style={styles.leakCard}>
+              <View style={styles.leakHeader}>
+                <Skeleton width={36} height={36} borderRadius={10} />
+                <View style={{ flex: 1, gap: 4 }}>
+                  <Skeleton width={140} height={16} />
+                  <Skeleton width={80} height={12} />
+                </View>
+                <Skeleton width={60} height={20} borderRadius={10} />
+              </View>
+              <Skeleton width="100%" height={36} style={{ marginBottom: Spacing.md }} />
+              <Skeleton width={100} height={14} />
+            </Card>
+          ))}
+        </View>
       </ScrollView>
     );
   }
@@ -150,7 +181,7 @@ export default function InsightsScreen() {
         <EmptyState
           icon={<Sparkles size={20} color={Colors.slate} />}
           title="Add a loan to unlock insights"
-          description="Insights are generated from your live loan data. Add your first loan to see risk watchlists and leak detection."
+          description="Insights are generated from your live loan data. Add your first loan to see risk watchlists and avoidable interest detection."
           action={isOffline ? undefined : { label: 'Add your first loan', href: '/(drawer)/(tabs)/dashboard' }}
         />
       </Card>
@@ -203,7 +234,7 @@ export default function InsightsScreen() {
           
           <View style={styles.lockedPlaceholder}>
             <Lock size={20} color={Colors.slateLight} style={{ marginBottom: 8 }} />
-            <Typography weight="medium" color="slate">Interest leak detector</Typography>
+            <Typography weight="medium" color="slate">Avoidable interest analysis</Typography>
             <Typography variant="caption" color="slateLight">Unlocks once loans and profile are complete</Typography>
           </View>
         </View>
@@ -240,7 +271,7 @@ export default function InsightsScreen() {
           {leaks.length > 0 ? (
             <View style={styles.section}>
               <Typography variant="body" weight="bold" color="navy" fontFamily="heading" style={styles.sectionTitle}>
-                Interest Leaks
+                Avoidable Interest Priority
               </Typography>
               {leaks.map((leak, i) => (
                 <Card key={i} style={styles.leakCard}>
@@ -250,7 +281,7 @@ export default function InsightsScreen() {
                     </View>
                     <View style={{ flex: 1 }}>
                       <Typography weight="bold" color="navy" fontFamily="heading">
-                        {formatCurrency(leak.annualLeakAmount, currencyCode)} annual leak
+                        {formatCurrency(leak.annualLeakAmount, currencyCode)} <Typography variant="caption" color="slate">potential savings / yr</Typography>
                       </Typography>
                       <Typography variant="caption" color="slate">{leak.loanName}</Typography>
                     </View>
@@ -276,7 +307,7 @@ export default function InsightsScreen() {
                 <Check size={24} color={Colors.white} />
               </View>
               <Typography variant="md" weight="bold" color="navy" fontFamily="heading">
-                No major interest leaks found!
+                No meaningful avoidable interest patterns!
               </Typography>
               <Typography color="slate" align="center" style={styles.noLeaksDesc}>
                 Your portfolio allocation is efficient. Keep maintaining your repayment strategy.

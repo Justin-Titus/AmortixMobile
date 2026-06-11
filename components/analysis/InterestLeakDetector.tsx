@@ -25,7 +25,7 @@ export default function InterestLeakDetector({ leaks, totalInterestPerMonth, cur
       <View style={styles.header}>
         <AlertTriangle size={18} color={Colors.amber} />
         <Typography variant="body" weight="bold" color="navy" fontFamily="heading">
-          Interest Leak Detector
+          Avoidable Interest Analysis
         </Typography>
       </View>
       <Typography variant="sm" color="slate" style={styles.subText}>
@@ -61,8 +61,8 @@ export default function InterestLeakDetector({ leaks, totalInterestPerMonth, cur
       ))}
 
       <View style={styles.footer}>
-        <Typography variant="sm" color="slate">Total monthly interest paid:</Typography>
-        <Typography variant="body" weight="bold" color="red">
+        <Typography variant="sm" color="slate">Monthly Interest Cost:</Typography>
+        <Typography variant="lg" weight="bold" color="red" fontFamily="heading">
           {formatCurrency(totalInterestPerMonth, currencyCode)}
         </Typography>
       </View>

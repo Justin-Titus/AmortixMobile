@@ -22,33 +22,41 @@ export default function AmortizationTable({ schedule, currencyCode = 'INR' }: Am
         Next 3 years of your debt-free journey
       </Typography>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.scroll}>
-        <View>
-          <View style={styles.tableHeader}>
-            <Typography variant="xs" weight="bold" color="slate" style={[styles.cell, { width: 50 }]}>Month</Typography>
-            <Typography variant="xs" weight="bold" color="slate" style={[styles.cell, { width: 100 }]}>Payment</Typography>
-            <Typography variant="xs" weight="bold" color="slate" style={[styles.cell, { width: 100 }]}>Principal</Typography>
-            <Typography variant="xs" weight="bold" color="slate" style={[styles.cell, { width: 100 }]}>Interest</Typography>
-            <Typography variant="xs" weight="bold" color="slate" style={[styles.cell, { width: 120 }]}>Balance</Typography>
-          </View>
+      <View style={styles.list}>
+        {displaySchedule.map((row) => {
+          const totalPayment = row.allocations.reduce((s: number, a: { payment: number }) => s + a.payment, 0);
+          const totalPrincipal = row.allocations.reduce((s: number, a: { principal: number }) => s + a.principal, 0);
+          const totalInterest = row.allocations.reduce((s: number, a: { interest: number }) => s + a.interest, 0);
 
-          {displaySchedule.map((row) => {
-            const totalPayment = row.allocations.reduce((s: number, a: { payment: number }) => s + a.payment, 0);
-            const totalPrincipal = row.allocations.reduce((s: number, a: { principal: number }) => s + a.principal, 0);
-            const totalInterest = row.allocations.reduce((s: number, a: { interest: number }) => s + a.interest, 0);
-
-            return (
-              <View key={row.month} style={styles.tableRow}>
-                <Typography variant="xs" color="navy" style={[styles.cell, { width: 50 }]}>{row.month}</Typography>
-                <Typography variant="xs" color="navy" weight="medium" style={[styles.cell, { width: 100 }]}>{formatCurrency(totalPayment, currencyCode)}</Typography>
-                <Typography variant="xs" color="emerald" style={[styles.cell, { width: 100 }]}>{formatCurrency(totalPrincipal, currencyCode)}</Typography>
-                <Typography variant="xs" color="red" style={[styles.cell, { width: 100 }]}>{formatCurrency(totalInterest, currencyCode)}</Typography>
-                <Typography variant="xs" color="navy" weight="semiBold" style={[styles.cell, { width: 120 }]}>{formatCurrency(row.totalDebtRemaining, currencyCode)}</Typography>
+          return (
+            <View key={row.month} style={styles.card}>
+              <View style={styles.cardHeader}>
+                <Typography variant="sm" weight="bold" color="navy" fontFamily="heading">
+                  Month {row.month}
+                </Typography>
+                <Typography variant="sm" weight="medium" color="slate">
+                  {formatCurrency(row.totalDebtRemaining, currencyCode)} left
+                </Typography>
               </View>
-            );
-          })}
-        </View>
-      </ScrollView>
+              
+              <View style={styles.cardBody}>
+                <View style={styles.metric}>
+                  <Typography variant="xs" color="slate" style={{ marginBottom: 2 }}>Payment</Typography>
+                  <Typography variant="body" weight="bold" color="navy">{formatCurrency(totalPayment, currencyCode)}</Typography>
+                </View>
+                <View style={styles.metric}>
+                  <Typography variant="xs" color="slate" style={{ marginBottom: 2 }}>Principal</Typography>
+                  <Typography variant="body" weight="bold" color="emerald">{formatCurrency(totalPrincipal, currencyCode)}</Typography>
+                </View>
+                <View style={styles.metric}>
+                  <Typography variant="xs" color="slate" style={{ marginBottom: 2 }}>Interest</Typography>
+                  <Typography variant="body" weight="bold" color="amber">{formatCurrency(totalInterest, currencyCode)}</Typography>
+                </View>
+              </View>
+            </View>
+          );
+        })}
+      </View>
       
       {schedule.length > 36 && (
         <Typography variant="caption" color="slate" style={styles.footer}>
@@ -72,29 +80,36 @@ const styles = StyleSheet.create({
   sub: {
     marginBottom: Spacing.lg,
   },
-  scroll: {
-    marginHorizontal: -Spacing.lg,
-    paddingHorizontal: Spacing.lg,
+  list: {
+    gap: Spacing.md,
   },
-  tableHeader: {
+  card: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: Radius.lg,
+    padding: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+  },
+  cardHeader: {
     flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
     paddingBottom: Spacing.sm,
-    marginBottom: Spacing.xs,
-  },
-  tableRow: {
-    flexDirection: 'row',
     borderBottomWidth: 1,
-    borderBottomColor: '#f8fafc',
-    paddingVertical: Spacing.sm,
+    borderBottomColor: '#E2E8F0',
   },
-  cell: {
-    paddingRight: 10,
+  cardBody: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  metric: {
+    flex: 1,
   },
   footer: {
     textAlign: 'center',
-    marginTop: Spacing.md,
+    marginTop: Spacing.lg,
   },
 });
+
 

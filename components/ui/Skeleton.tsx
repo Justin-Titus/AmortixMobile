@@ -47,8 +47,8 @@ export function Skeleton({
     <Animated.View
       style={[
         {
-          width,
-          height,
+          width: width as any,
+          height: height as any,
           borderRadius,
           backgroundColor: color,
         },

@@ -78,10 +78,30 @@ export default function CalendarScreen() {
 
   const currencyCode = data?.profile?.currency ?? 'INR';
 
-  const { days, dueIn30, totalDueIn30 } = useMemo(
+  const { days } = useMemo(
     () => buildCalendarData(loans, currentMonth, today),
     [loans, currentMonth, today]
   );
+
+  const { dueThisMonth, totalDueThisMonth } = useMemo(() => {
+    const list: { loanId: string; loanName: string; amount: number; dueDate: Date; status: string }[] = [];
+    for (const dateKey of Object.keys(days)) {
+      for (const loan of days[dateKey].loans) {
+        list.push({
+          loanId: loan.loanId,
+          loanName: loan.loanName,
+          amount: loan.emiAmount,
+          dueDate: new Date(dateKey),
+          status: loan.status,
+        });
+      }
+    }
+    list.sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
+    return {
+      dueThisMonth: list,
+      totalDueThisMonth: list.reduce((s, e) => s + e.amount, 0),
+    };
+  }, [days]);
 
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const firstDayOfWeek = new Date(year, month, 1).getDay();
@@ -126,15 +146,15 @@ export default function CalendarScreen() {
           <View style={styles.heroStat}>
             {loading ? <Skeleton width={100} height={24} style={{ marginBottom: 4 }} /> : (
               <Typography variant="lg" weight="bold" color="navy" fontFamily="heading">
-                {formatCurrency(totalDueIn30, currencyCode)}
+                {formatCurrency(totalDueThisMonth, currencyCode)}
               </Typography>
             )}
-            <Typography variant="xs" color="slate">Due in 30 days</Typography>
+            <Typography variant="xs" color="slate">Due this month</Typography>
           </View>
           <View style={styles.heroStat}>
             {loading ? <Skeleton width={40} height={24} style={{ marginBottom: 4 }} /> : (
               <Typography variant="lg" weight="bold" color="navy" fontFamily="heading">
-                {dueIn30.length}
+                {dueThisMonth.length}
               </Typography>
             )}
             <Typography variant="xs" color="slate">Payments</Typography>
@@ -246,7 +266,7 @@ export default function CalendarScreen() {
           <Typography variant="md" weight="medium" color="navy" fontFamily="heading">
             {selectedDay 
               ? new Date(selectedDay.date).toLocaleDateString(getCurrencyConfig(currencyCode).locale, { day: 'numeric', month: 'short', year: 'numeric' })
-              : 'Upcoming payments'}
+              : "This month's dues"}
           </Typography>
         </View>
 
@@ -281,20 +301,34 @@ export default function CalendarScreen() {
           </View>
         ) : (
           <View style={styles.dayList}>
-            {dueIn30.length === 0 ? (
+            {dueThisMonth.length === 0 ? (
               <Typography color="slate" align="center" style={styles.emptyListText}>
-                No payments due in next 30 days.
+                No payments due this month.
               </Typography>
             ) : (
-              dueIn30.map((item, idx) => (
-                <View key={idx} style={styles.dueItem}>
+              dueThisMonth.map((item: any, idx) => (
+                <View key={idx} style={[styles.dueItem, item.status === 'paid' ? {backgroundColor: '#ecfdf5', opacity: 0.8} : item.status === 'overdue' ? {backgroundColor: '#fef2f2'} : {}]}>
                   <View style={styles.dueMain}>
-                    <Typography weight="medium" color="navy" fontFamily="heading">{item.loanName}</Typography>
-                    <Typography variant="caption" color="slate">
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Typography weight="medium" color={item.status === 'paid' ? 'emerald' : item.status === 'overdue' ? 'red' : 'navy'} fontFamily="heading" style={item.status === 'paid' ? {textDecorationLine: 'line-through'} : {}}>
+                        {item.loanName}
+                      </Typography>
+                      {item.status === 'overdue' && (
+                        <View style={{ backgroundColor: '#fee2e2', paddingHorizontal: 4, paddingVertical: 2, borderRadius: 4 }}>
+                          <Typography variant="xs" weight="bold" color="red">OVERDUE</Typography>
+                        </View>
+                      )}
+                      {item.status === 'paid' && (
+                        <View style={{ backgroundColor: '#d1fae5', paddingHorizontal: 4, paddingVertical: 2, borderRadius: 4 }}>
+                          <Typography variant="xs" weight="bold" color="emerald">PAID</Typography>
+                        </View>
+                      )}
+                    </View>
+                    <Typography variant="caption" color={item.status === 'overdue' ? 'red' : 'slate'}>
                       {item.dueDate.toLocaleDateString(getCurrencyConfig(currencyCode).locale, { day: 'numeric', month: 'short' })}
                     </Typography>
                   </View>
-                  <Typography weight="bold" color="navy" fontFamily="heading">{formatCurrency(item.amount, currencyCode)}</Typography>
+                  <Typography weight="bold" color={item.status === 'paid' ? 'emerald' : item.status === 'overdue' ? 'red' : 'navy'} fontFamily="heading">{formatCurrency(item.amount, currencyCode)}</Typography>
                 </View>
               ))
             )}

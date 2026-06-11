@@ -168,9 +168,44 @@ export default function LoanDetailScreen() {
              ))}
            </View>
 
-           <Skeleton width="100%" height={120} borderRadius={Radius.md} style={{ marginBottom: Spacing.md }} />
-           <Skeleton width="100%" height={40} />
-        </Card>
+            <Skeleton width="100%" height={120} borderRadius={Radius.md} style={{ marginBottom: Spacing.md }} />
+            <Skeleton width="100%" height={40} />
+         </Card>
+
+         {/* Log Payment Card Skeleton */}
+         <Card style={{ marginBottom: Spacing.md }}>
+           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.md, gap: Spacing.sm }}>
+             <Skeleton width={20} height={20} borderRadius={10} />
+             <Skeleton width={130} height={18} />
+           </View>
+           <Skeleton width="100%" height={48} borderRadius={Radius.sm} style={{ marginBottom: Spacing.md }} />
+           <Skeleton width="100%" height={40} borderRadius={Radius.button} />
+         </Card>
+
+         {/* Recent Payments Card Skeleton */}
+         <Card style={{ marginBottom: Spacing.md }}>
+           <Skeleton width={150} height={20} style={{ marginBottom: Spacing.md }} />
+           {[1, 2].map(i => (
+             <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: Spacing.sm, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' }}>
+               <View style={{ gap: 4 }}>
+                 <Skeleton width={80} height={16} />
+                 <Skeleton width={50} height={12} />
+               </View>
+               <Skeleton width={70} height={16} />
+             </View>
+           ))}
+         </Card>
+
+         {/* Loan Details Card Skeleton */}
+         <Card>
+           <Skeleton width={120} height={20} style={{ marginBottom: Spacing.md }} />
+           {[1, 2, 3, 4, 5].map(i => (
+             <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: Spacing.md, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' }}>
+               <Skeleton width={90} height={16} />
+               <Skeleton width={100} height={16} />
+             </View>
+           ))}
+         </Card>
       </ScrollView>
     );
   }

@@ -44,3 +44,29 @@ export function buildLoanHeroStats(loans: LoanSummaryInput[], currencyCode: stri
     { label: "Avg rate", value: `${avgRate.toFixed(2)}%`, muted: avgRate === 0 },
   ];
 }
+
+export function getProjectedPayoffDate(loans: LoanSummaryInput[]): Date {
+  let maxMonths = 0;
+  for (const loan of loans) {
+    if (loan.outstandingBalance <= 0 || loan.emiAmount <= 0) continue;
+    
+    const r = loan.interestRate / 12 / 100;
+    let months = 0;
+    if (r === 0) {
+      months = loan.outstandingBalance / loan.emiAmount;
+    } else {
+      const denom = 1 - (r * loan.outstandingBalance) / loan.emiAmount;
+      if (denom <= 0) {
+         // EMI is less than interest! Never pays off. Cap at 100 years.
+         months = 1200;
+      } else {
+         months = -Math.log(denom) / Math.log(1 + r);
+      }
+    }
+    maxMonths = Math.max(maxMonths, months);
+  }
+  
+  const date = new Date();
+  date.setMonth(date.getMonth() + Math.ceil(maxMonths));
+  return date;
+}
