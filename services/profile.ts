@@ -109,7 +109,7 @@ export async function getUserData() {
 
   const { data, error } = await supabase
     .from('User')
-    .select('id, name, email, onboardingStep, onboardingCompleted')
+    .select('id, name, email, onboardingStep, onboardingCompleted, emailNotifications, pushNotifications')
     .eq('id', user.id)
     .single();
 
@@ -120,7 +120,10 @@ export async function getUserData() {
   return data;
 }
 
-export async function updateUserName(name: string) {
+export async function updateUserSettings(input: {
+  emailNotifications?: boolean;
+  pushNotifications?: boolean;
+}) {
   const { data: { session } } = await supabase.auth.getSession();
   const user = session?.user;
   if (!user) return { error: 'Unauthorized' };
@@ -128,7 +131,7 @@ export async function updateUserName(name: string) {
   const { error } = await supabase
     .from('User')
     .update({ 
-      name,
+      ...input,
       updatedAt: new Date().toISOString()
     })
     .eq('id', user.id);

@@ -215,12 +215,23 @@ export async function recordPayment(loanId: string, input: PaymentInput) {
     return { error: paymentError.message };
   }
 
+  // Advance nextEmiDate if it's an EMI payment
+  let newNextEmiDate = undefined;
+  if (input.type === 'EMI' && loan.nextEmiDate) {
+    const d = new Date(loan.nextEmiDate);
+    const targetMonth = (d.getMonth() + 1) % 12;
+    const targetYear = d.getMonth() === 11 ? d.getFullYear() + 1 : d.getFullYear();
+    const lastDay = new Date(targetYear, targetMonth + 1, 0).getDate();
+    newNextEmiDate = new Date(targetYear, targetMonth, Math.min(d.getDate(), lastDay)).toISOString();
+  }
+
   // Update loan balance
   const { error: updateError } = await supabase
     .from('Loan')
     .update({ 
       outstandingBalance: newBalance,
       updatedAt: new Date().toISOString(),
+      ...(newNextEmiDate ? { nextEmiDate: newNextEmiDate } : {})
     })
     .eq('id', loanId);
 

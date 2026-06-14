@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { DeviceEventEmitter } from 'react-native';
 import { useNetworkStatus } from './useNetworkStatus';
 import { getLastSyncTime } from '@/lib/offline/cache';
 
@@ -58,6 +59,10 @@ export function useOfflineData<T>({ fetcher, cacher, reader }: UseOfflineDataOpt
 
   useEffect(() => {
     loadData();
+    const subscription = DeviceEventEmitter.addListener('global_sync_complete', () => {
+      loadData(true);
+    });
+    return () => subscription.remove();
   }, [loadData]);
 
   const refresh = useCallback(() => {

@@ -3,7 +3,7 @@ import {
   View, ScrollView, TouchableOpacity, KeyboardAvoidingView,
   Platform, StyleSheet, Alert, Vibration,
 } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { useNavigation } from '@react-navigation/native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { createLoan, getLoan, updateLoan } from '@/services/loans';
@@ -66,33 +66,37 @@ export default function AddLoanScreen() {
     return unsubscribe;
   }, [navigation, isDirty, submitting]);
 
-  useEffect(() => {
-    const init = async () => {
-      const p = await getProfile();
-      if (p) {
-        setCurrency(p.currency || 'INR');
-      }
-      if (id) {
-        const l = await getLoan(id);
-        if (l) {
-          setName(l.name);
-          setLoanType(l.loanType);
-          setPrincipal(String(l.principal));
-          setOutstanding(String(l.outstandingBalance));
-          setRate(String(l.interestRate));
-          setRateType(l.rateType);
-          setTenure(String(l.tenureMonths));
-          setEmi(String(l.emiAmount));
-          setStartDate(new Date(l.startDate));
-          setLender(l.lender || '');
-          setNotes(l.notes || '');
-          setCurrency(l.currency || p?.currency || 'INR');
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
+      const init = async () => {
+        const p = await getProfile();
+        if (isActive && p) {
+          setCurrency(p.currency || 'INR');
         }
-      }
-      setLoading(false);
-    };
-    init();
-  }, [id]);
+        if (isActive && id) {
+          const l = await getLoan(id);
+          if (isActive && l) {
+            setName(l.name);
+            setLoanType(l.loanType);
+            setPrincipal(String(l.principal));
+            setOutstanding(String(l.outstandingBalance));
+            setRate(String(l.interestRate));
+            setRateType(l.rateType);
+            setTenure(String(l.tenureMonths));
+            setEmi(String(l.emiAmount));
+            setStartDate(new Date(l.startDate));
+            setLender(l.lender || '');
+            setNotes(l.notes || '');
+            setCurrency(l.currency || p?.currency || 'INR');
+          }
+        }
+        if (isActive) setLoading(false);
+      };
+      init();
+      return () => { isActive = false; };
+    }, [id])
+  );
   
   useEffect(() => {
     const p = Number(principal);

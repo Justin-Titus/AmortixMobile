@@ -1,11 +1,11 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   View, ScrollView, TouchableOpacity, RefreshControl,
-  Alert, StyleSheet, Image, Linking,
+  Alert, StyleSheet, Image, Linking, Switch,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { getProfile, getUserData, type FinancialProfile } from '@/services/profile';
+import { getProfile, getUserData, updateUserSettings, type FinancialProfile } from '@/services/profile';
 import { Card } from '@/components/ui/Card';
 import Typography from '@/components/ui/Typography';
 import { Colors, Spacing, Radius } from '@/constants/theme';
@@ -35,6 +35,51 @@ export default function ProfileScreen() {
   }, []);
 
   const { data, loading, refreshing, refresh, isOffline } = useOfflineData({ fetcher, cacher, reader });
+
+  const [emailNotifications, setEmailNotifications] = useState(true);
+  const [pushNotifications, setPushNotifications] = useState(true);
+  const [updatingSettings, setUpdatingSettings] = useState(false);
+
+  useEffect(() => {
+    if (data?.userData) {
+      setEmailNotifications(data.userData.emailNotifications ?? true);
+      setPushNotifications(data.userData.pushNotifications ?? true);
+    }
+  }, [data]);
+
+  const handleToggle = async (type: 'email' | 'push', value: boolean) => {
+    if (isOffline) {
+      Alert.alert('Offline', 'Cannot update preferences while offline.');
+      return;
+    }
+    
+    // Optimistic update
+    if (type === 'email') setEmailNotifications(value);
+    else setPushNotifications(value);
+
+    setUpdatingSettings(true);
+    const result = await updateUserSettings({
+      [type === 'email' ? 'emailNotifications' : 'pushNotifications']: value,
+    });
+
+    if (result.error) {
+      Alert.alert('Error', result.error);
+      // Revert state
+      if (type === 'email') setEmailNotifications(!value);
+      else setPushNotifications(!value);
+    } else {
+      // Update cache immediately to prevent momentary revert when refresh() loads from cache
+      if (data?.userData) {
+        const updatedUserData = {
+          ...data.userData,
+          [type === 'email' ? 'emailNotifications' : 'pushNotifications']: value,
+        };
+        await saveOfflineUserData(updatedUserData);
+      }
+      refresh(); // Refresh offline cache with new data from server
+    }
+    setUpdatingSettings(false);
+  };
 
   const profile = data?.profile ?? null;
   const userData = data?.userData ?? null;
@@ -153,6 +198,39 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
         )}
+      </Card>
+
+      {/* Notification preferences */}
+      <Card>
+        <Typography variant="md" weight="bold" color="navy" fontFamily="heading" style={s.sectionTitle}>
+          Notification preferences
+        </Typography>
+        
+        <View style={s.profileRow}>
+          <View style={{ flex: 1, marginRight: Spacing.sm }}>
+            <Typography variant="body" weight="medium" color="navy">Email Notifications</Typography>
+            <Typography variant="caption" color="slate">Receive EMI reminders via email</Typography>
+          </View>
+          <Switch
+            value={emailNotifications}
+            onValueChange={(val) => handleToggle('email', val)}
+            disabled={updatingSettings || isOffline}
+            trackColor={{ false: '#cbd5e1', true: Colors.emerald }}
+          />
+        </View>
+
+        <View style={[s.profileRow, { borderBottomWidth: 0 }]}>
+          <View style={{ flex: 1, marginRight: Spacing.sm }}>
+            <Typography variant="body" weight="medium" color="navy">Push Notifications</Typography>
+            <Typography variant="caption" color="slate">Receive push alerts on this device</Typography>
+          </View>
+          <Switch
+            value={pushNotifications}
+            onValueChange={(val) => handleToggle('push', val)}
+            disabled={updatingSettings || isOffline}
+            trackColor={{ false: '#cbd5e1', true: Colors.emerald }}
+          />
+        </View>
       </Card>
 
       {/* Settings & Support */}

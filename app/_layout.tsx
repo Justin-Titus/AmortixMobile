@@ -26,6 +26,7 @@ import {
 
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { useGlobalSync } from '@/hooks/useGlobalSync';
+import { useAutoSync } from '@/hooks/useAutoSync';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 
 // Prevent splash from hiding until we're ready
@@ -38,6 +39,11 @@ function NotificationInitializer() {
 
 function GlobalSyncInitializer() {
   useGlobalSync();
+  return null;
+}
+
+function AutoSyncInitializer() {
+  useAutoSync(5000);
   return null;
 }
 
@@ -72,6 +78,7 @@ export default function RootLayout() {
           <AuthProvider>
             <NotificationInitializer />
             <GlobalSyncInitializer />
+            <AutoSyncInitializer />
             <StatusBar style="dark" />
             <Stack screenOptions={{ headerShown: false }}>
               <Stack.Screen name="(auth)" />

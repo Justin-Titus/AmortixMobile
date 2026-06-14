@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, ScrollView, TouchableOpacity, KeyboardAvoidingView,
   Platform, StyleSheet, Alert,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { getProfile, updateProfile, type FinancialProfile } from '@/services/profile';
 import { Input } from '@/components/ui/Input';
 import { Colors, Radius, Spacing, Shadows } from '@/constants/theme';
@@ -28,20 +28,24 @@ export default function EditProfileScreen() {
   const [emergencyMonths, setEmergencyMonths] = useState('');
   const [currency, setCurrency] = useState('INR');
 
-  useEffect(() => {
-    getProfile().then(p => {
-      if (p) {
-        setIncome(String(p.monthlyIncome));
-        setExpenses(String(p.monthlyExpenses));
-        setEmploymentType(p.employmentType);
-        setCreditScore(p.creditScoreRange);
-        setHasEmergencyFund(p.hasEmergencyFund);
-        setEmergencyMonths(String(p.emergencyFundMonths));
-        setCurrency(p.currency || 'INR');
-      }
-      setLoading(false);
-    });
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
+      getProfile().then(p => {
+        if (isActive && p) {
+          setIncome(String(p.monthlyIncome));
+          setExpenses(String(p.monthlyExpenses));
+          setEmploymentType(p.employmentType);
+          setCreditScore(p.creditScoreRange);
+          setHasEmergencyFund(p.hasEmergencyFund);
+          setEmergencyMonths(String(p.emergencyFundMonths));
+          setCurrency(p.currency || 'INR');
+        }
+        if (isActive) setLoading(false);
+      });
+      return () => { isActive = false; };
+    }, [])
+  );
 
   const handleSubmit = async () => {
     if (!income || isNaN(Number(income))) { Alert.alert('Error', 'Valid monthly income is required'); return; }
@@ -60,7 +64,7 @@ export default function EditProfileScreen() {
 
     if (result.success) {
       Alert.alert('Success', 'Profile updated successfully!', [
-        { text: 'OK', onPress: () => router.back() }
+        { text: 'OK', onPress: () => router.push('/(drawer)/(tabs)/profile') }
       ]);
     } else {
       Alert.alert('Error', result.error || 'Failed to update profile');

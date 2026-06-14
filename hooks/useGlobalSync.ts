@@ -11,6 +11,8 @@ import {
   saveOfflineLoans, // also save simple loans to fulfill all cache needs
 } from '@/lib/offline/cache';
 
+import { processOfflineMutations } from '@/lib/offline/mutations';
+
 export function useGlobalSync() {
   const { session } = useAuth();
   const isOnline = useNetworkStatus();
@@ -23,6 +25,9 @@ export function useGlobalSync() {
       if (!session || !isOnline) return;
 
       try {
+        // Process offline mutations first
+        await processOfflineMutations();
+
         const [loans, profile, snapshots, user] = await Promise.all([
           getLoansWithPayments(),
           getProfile(),

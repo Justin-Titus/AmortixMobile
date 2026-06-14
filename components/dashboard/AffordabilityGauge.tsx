@@ -5,6 +5,7 @@ import Animated, {
   useSharedValue,
   useAnimatedProps,
   withTiming,
+  withDelay,
   Easing,
 } from 'react-native-reanimated';
 import { getAffordabilityZoneLabel } from '@/lib/calculations';
@@ -35,10 +36,11 @@ export default function AffordabilityGauge({ score }: AffordabilityGaugeProps) {
 
   useEffect(() => {
     const progress = circumference * (1 - safeScore / 100);
-    animatedProgress.value = withTiming(progress, {
-      duration: 1000,
-      easing: Easing.out(Easing.exp),
-    });
+    animatedProgress.value = circumference; // Reset on load
+    animatedProgress.value = withDelay(150, withTiming(progress, {
+      duration: 1200,
+      easing: Easing.out(Easing.cubic),
+    }));
   }, [safeScore, circumference]);
 
   const animatedProps = useAnimatedProps(() => ({

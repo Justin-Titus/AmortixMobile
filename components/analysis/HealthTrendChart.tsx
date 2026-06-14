@@ -92,7 +92,7 @@ export default function HealthTrendChart({ snapshots }: { snapshots: HealthSnaps
 
     const months = Object.values(monthlyData);
     const count = monthsForRange(range);
-    
+
     return months.slice(-count);
   }, [range, snapshots]);
 
@@ -157,7 +157,7 @@ export default function HealthTrendChart({ snapshots }: { snapshots: HealthSnaps
     let healthAreaPoints: string[] = [];
     let healthLinePoints: string[] = [];
     let dtiLinePoints: string[] = [];
-    
+
     // We only map actual entries (not projected nulls)
     const actualLength = processedSnapshots.length;
 
@@ -337,7 +337,7 @@ export default function HealthTrendChart({ snapshots }: { snapshots: HealthSnaps
                   stroke={isProjection ? '#10B981' : Colors.white}
                   strokeWidth={isProjection ? 2.2 : 1.5}
                 />
-                
+
                 {/* DTI Dot (only for actual data, not projection) */}
                 {!isProjection && (
                   <Circle

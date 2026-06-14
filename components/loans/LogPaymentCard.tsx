@@ -49,12 +49,30 @@ export function LogPaymentCard({ loanId, defaultAmount, onSuccess, currencyCode 
     setIsSubmitting(true);
     setError(null);
 
-    const result = await recordPayment(loanId, {
-      amount: numAmount,
-      paymentDate: date.toISOString(),
-      type,
-      notes: notes || undefined,
-    });
+    let result;
+    if (isOffline) {
+      const { queueOfflineMutation } = require('@/lib/offline/mutations');
+      await queueOfflineMutation({
+        type: 'RECORD_PAYMENT',
+        payload: {
+          loanId,
+          input: {
+            amount: numAmount,
+            paymentDate: date.toISOString(),
+            type,
+            notes: notes || undefined,
+          }
+        }
+      });
+      result = { success: true };
+    } else {
+      result = await recordPayment(loanId, {
+        amount: numAmount,
+        paymentDate: date.toISOString(),
+        type,
+        notes: notes || undefined,
+      });
+    }
 
     if (result.error) {
       setError(result.error);
@@ -154,10 +172,10 @@ export function LogPaymentCard({ loanId, defaultAmount, onSuccess, currencyCode 
       {error && <Typography variant="xs" color="red" align="center" style={s.error}>{error}</Typography>}
 
       <Button
-        title={isOffline ? 'Offline - Cannot record' : isSubmitting ? 'Recording...' : type === 'EMI' ? 'Log EMI' : 'Log Prepayment'}
+        title={isOffline ? (type === 'EMI' ? 'Queue EMI (Offline)' : 'Queue Prepayment (Offline)') : isSubmitting ? 'Recording...' : type === 'EMI' ? 'Log EMI' : 'Log Prepayment'}
         onPress={handleSubmit}
         loading={isSubmitting}
-        disabled={isOffline || isSubmitting}
+        disabled={isSubmitting}
         variant={type === 'EMI' ? 'primary' : 'secondary'}
         style={type === 'PREPAYMENT' ? s.prepaymentBtn : undefined}
         textStyle={type === 'PREPAYMENT' ? s.prepaymentBtnText : undefined}

@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useRouter, useFocusEffect } from 'expo-router';
 import { Colors, Spacing, Radius } from '@/constants/theme';
 import Typography from '@/components/ui/Typography';
 import { getNotifications, markAsRead, markAllAsRead, type NotificationRecord } from '@/services/notifications';
@@ -24,9 +24,11 @@ export default function NotificationsScreen() {
     }
   };
 
-  useEffect(() => {
-    fetchNotifications();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      fetchNotifications();
+    }, [])
+  );
 
   const onRefresh = () => {
     setRefreshing(true);
