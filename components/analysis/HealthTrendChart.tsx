@@ -1,10 +1,22 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import Svg, { Path, Line, Circle, Defs, LinearGradient, Stop, Text as SvgText } from 'react-native-svg';
+import Animated, {
+  useSharedValue,
+  useAnimatedProps,
+  withTiming,
+  withDelay,
+  cancelAnimation,
+  Easing,
+} from 'react-native-reanimated';
 import { Card } from '@/components/ui/Card';
 import Typography from '@/components/ui/Typography';
 import { Colors, Radius, Spacing, Shadows } from '@/constants/theme';
-import { TrendingUp, Activity } from 'lucide-react-native';
+import { TrendingUp } from 'lucide-react-native';
+import { useInView } from '@/hooks/useInView';
+
+const AnimatedPath = Animated.createAnimatedComponent(Path);
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 export type HealthSnapshotPoint = {
   id: string;
@@ -32,14 +44,11 @@ function monthsForRange(range: RangeKey): number {
 
 function projectPoints(points: HealthSnapshotPoint[]): HealthSnapshotPoint[] {
   if (points.length < 2) return [];
-
   const last = points[points.length - 1];
   const previous = points[points.length - 2];
   const delta = last.affordabilityScore - previous.affordabilityScore;
-
   const futureDate = new Date(last.capturedAt);
   futureDate.setMonth(futureDate.getMonth() + 1);
-
   return [
     {
       id: `${last.id}-projection`,
@@ -55,12 +64,10 @@ export function getTrendInsight(snapshots: HealthSnapshotPoint[]): string {
   if (snapshots.length < 2) {
     return 'Keep using Amortix monthly to build your health trend.';
   }
-
   const first = snapshots[0];
   const last = snapshots[snapshots.length - 1];
   const deltaScore = last.affordabilityScore - first.affordabilityScore;
   const deltaDTI = (last.dtiRatio - first.dtiRatio) * 100;
-
   if (deltaScore > 5) {
     return `Your financial health improved by ${deltaScore.toFixed(0)} points. You're building solid momentum.`;
   }
@@ -70,29 +77,46 @@ export function getTrendInsight(snapshots: HealthSnapshotPoint[]): string {
   if (deltaDTI < -5) {
     return 'Your health score is stable, but your Debt-to-Income ratio is improving. Good progress!';
   }
-
   return 'Your financial health has stayed stable. A consistent trend is a good sign for lenders.';
 }
 
+/**
+ * Approximate SVG path length by summing Euclidean distances between
+ * consecutive coordinate pairs parsed from the path string.
+ */
+function calcPathLen(d: string): number {
+  if (!d) return 0;
+  const tokens = d.split(/[\s,]+/);
+  const coords: number[] = [];
+  for (const t of tokens) {
+    const n = parseFloat(t);
+    if (!isNaN(n)) coords.push(n);
+  }
+  let len = 0;
+  for (let i = 2; i < coords.length - 1; i += 2) {
+    const dx = coords[i] - coords[i - 2];
+    const dy = coords[i + 1] - coords[i - 1];
+    len += Math.sqrt(dx * dx + dy * dy);
+  }
+  return len > 0 ? len : 0;
+}
+
 export default function HealthTrendChart({ snapshots }: { snapshots: HealthSnapshotPoint[] }) {
+  const containerRef = useRef<View>(null);
+  const isInView = useInView(containerRef);
   const [range, setRange] = useState<RangeKey>('6M');
 
   const processedSnapshots = useMemo(() => {
-    // 1. Sort by date
     const sorted = [...snapshots].sort(
       (a, b) => new Date(a.capturedAt).getTime() - new Date(b.capturedAt).getTime()
     );
-
-    // 2. Group by month-year to ensure one point per month
     const monthlyData: Record<string, HealthSnapshotPoint> = {};
     sorted.forEach((s) => {
       const key = new Date(s.capturedAt).toLocaleDateString('en-US', { month: '2-digit', year: 'numeric' });
       monthlyData[key] = s;
     });
-
     const months = Object.values(monthlyData);
     const count = monthsForRange(range);
-
     return months.slice(-count);
   }, [range, snapshots]);
 
@@ -107,7 +131,6 @@ export default function HealthTrendChart({ snapshots }: { snapshots: HealthSnaps
       dtiRatioPercent: Math.round(snapshot.dtiRatio * 100),
       totalOutstanding: snapshot.totalOutstanding,
     }));
-
     if (data.length > 0 && projected.length > 0) {
       const lastPoint = data[data.length - 1];
       const projectionRows = projected.map((snapshot) => ({
@@ -120,15 +143,13 @@ export default function HealthTrendChart({ snapshots }: { snapshots: HealthSnaps
       }));
       return [...data, ...projectionRows];
     }
-
     return data;
   }, [processedSnapshots, projected]);
 
   const trendInsight = useMemo(() => getTrendInsight(processedSnapshots), [processedSnapshots]);
 
-  // Dimension mapping
   const screenWidth = Dimensions.get('window').width;
-  const chartWidth = screenWidth - Spacing.base * 4; // Margin adjustments
+  const chartWidth = screenWidth - Spacing.base * 4;
   const chartHeight = 180;
   const paddingLeft = 30;
   const paddingRight = 10;
@@ -138,50 +159,36 @@ export default function HealthTrendChart({ snapshots }: { snapshots: HealthSnaps
   const paths = useMemo(() => {
     if (chartData.length < 2) return { healthArea: '', healthLine: '', dtiLine: '', projectionLine: '' };
 
-    const getX = (idx: number) => {
-      const scaleWidth = chartWidth - paddingLeft - paddingRight;
-      return paddingLeft + (idx / (chartData.length - 1)) * scaleWidth;
-    };
+    const totalPts = chartData.length;
+    const scaleW = chartWidth - paddingLeft - paddingRight;
+    const scaleH = chartHeight - paddingTop - paddingBottom;
 
-    const getYHealth = (score: number) => {
-      const scaleHeight = chartHeight - paddingTop - paddingBottom;
-      return chartHeight - paddingBottom - (score / 100) * scaleHeight;
-    };
+    const getX = (idx: number) => paddingLeft + (idx / (totalPts - 1)) * scaleW;
+    const getYHealth = (score: number) => chartHeight - paddingBottom - (score / 100) * scaleH;
+    const getYDti = (dti: number) => chartHeight - paddingBottom - (dti / 100) * scaleH;
 
-    const getYDti = (dti: number) => {
-      const scaleHeight = chartHeight - paddingTop - paddingBottom;
-      return chartHeight - paddingBottom - (dti / 100) * scaleHeight;
-    };
-
-    // 1. Health Area & Line
-    let healthAreaPoints: string[] = [];
-    let healthLinePoints: string[] = [];
-    let dtiLinePoints: string[] = [];
-
-    // We only map actual entries (not projected nulls)
     const actualLength = processedSnapshots.length;
+    let healthAreaPts: string[] = [];
+    let healthLinePts: string[] = [];
+    let dtiLinePts: string[] = [];
 
     for (let i = 0; i < actualLength; i++) {
       const x = getX(i);
       const yH = getYHealth(chartData[i].affordabilityScore);
       const yD = getYDti(chartData[i].dtiRatioPercent);
-
       if (i === 0) {
-        healthAreaPoints.push(`M ${x} ${chartHeight - paddingBottom}`);
-        healthAreaPoints.push(`L ${x} ${yH}`);
-        healthLinePoints.push(`M ${x} ${yH}`);
-        dtiLinePoints.push(`M ${x} ${yD}`);
+        healthAreaPts.push(`M ${x} ${chartHeight - paddingBottom} L ${x} ${yH}`);
+        healthLinePts.push(`M ${x} ${yH}`);
+        dtiLinePts.push(`M ${x} ${yD}`);
       } else {
-        healthAreaPoints.push(`L ${x} ${yH}`);
-        healthLinePoints.push(`L ${x} ${yH}`);
-        dtiLinePoints.push(`L ${x} ${yD}`);
+        healthAreaPts.push(`L ${x} ${yH}`);
+        healthLinePts.push(`L ${x} ${yH}`);
+        dtiLinePts.push(`L ${x} ${yD}`);
       }
     }
-
-    if (healthAreaPoints.length > 0) {
+    if (healthAreaPts.length > 0) {
       const lastX = getX(actualLength - 1);
-      healthAreaPoints.push(`L ${lastX} ${chartHeight - paddingBottom}`);
-      healthAreaPoints.push('Z');
+      healthAreaPts.push(`L ${lastX} ${chartHeight - paddingBottom} Z`);
     }
 
     let projectionLine = '';
@@ -194,12 +201,97 @@ export default function HealthTrendChart({ snapshots }: { snapshots: HealthSnaps
     }
 
     return {
-      healthArea: healthAreaPoints.join(' '),
-      healthLine: healthLinePoints.join(' '),
-      dtiLine: dtiLinePoints.join(' '),
-      projectionLine
+      healthArea: healthAreaPts.join(' '),
+      healthLine: healthLinePts.join(' '),
+      dtiLine: dtiLinePts.join(' '),
+      projectionLine,
     };
   }, [chartData, processedSnapshots.length, projected.length, chartWidth]);
+
+  // Store path lengths in refs so useAnimatedProps can always read the current value
+  // without creating a stale closure.
+  const healthLenRef = useRef(0);
+  const dtiLenRef = useRef(0);
+  const projLenRef = useRef(0);
+
+  // Update refs whenever paths change
+  healthLenRef.current = calcPathLen(paths.healthLine);
+  dtiLenRef.current = calcPathLen(paths.dtiLine);
+  projLenRef.current = calcPathLen(paths.projectionLine);
+
+  // Single progress value 0→1 drives all line animations
+  const lineProgress = useSharedValue(0);
+  const areaOpacity = useSharedValue(0);
+  const dotOpacity = useSharedValue(0);
+  const projProgress = useSharedValue(0);
+
+  // A string key that changes whenever the chart data changes — used as effect dep
+  const chartKey = useMemo(
+    () => chartData.map(d => d.month + (d.affordabilityScore ?? d.projectedScore)).join('|'),
+    [chartData]
+  );
+
+  useEffect(() => {
+    if (!isInView) return;
+    if (processedSnapshots.length < 2) return;
+
+    const easing = Easing.out(Easing.cubic);
+
+    // Cancel any running animations and reset to start
+    cancelAnimation(lineProgress);
+    cancelAnimation(areaOpacity);
+    cancelAnimation(dotOpacity);
+    cancelAnimation(projProgress);
+
+    lineProgress.value = 0;
+    areaOpacity.value = 0;
+    dotOpacity.value = 0;
+    projProgress.value = 0;
+
+    // Lines draw on (0→1 progress)
+    lineProgress.value = withDelay(80, withTiming(1, { duration: 1000, easing }));
+    // Area fades in
+    areaOpacity.value = withDelay(200, withTiming(1, { duration: 700, easing }));
+    // Dots appear
+    dotOpacity.value = withDelay(900, withTiming(1, { duration: 400, easing }));
+    // Projection line (after main lines finish)
+    projProgress.value = withDelay(1050, withTiming(1, { duration: 600, easing }));
+  }, [chartKey, isInView]);
+
+  const healthLineAnimProps = useAnimatedProps(() => {
+    'worklet';
+    const len = healthLenRef.current;
+    return {
+      strokeDasharray: `${len} ${len}`,
+      strokeDashoffset: len * (1 - lineProgress.value),
+    };
+  });
+
+  const dtiLineAnimProps = useAnimatedProps(() => {
+    'worklet';
+    const len = dtiLenRef.current;
+    return {
+      strokeDasharray: `${len} ${len}`,
+      strokeDashoffset: len * (1 - lineProgress.value),
+    };
+  });
+
+  const projLineAnimProps = useAnimatedProps(() => {
+    'worklet';
+    const len = projLenRef.current;
+    return {
+      strokeDasharray: `${len} ${len}`,
+      strokeDashoffset: len * (1 - projProgress.value),
+    };
+  });
+
+  const areaAnimProps = useAnimatedProps(() => ({
+    opacity: areaOpacity.value,
+  }));
+
+  const dotAnimProps = useAnimatedProps(() => ({
+    opacity: dotOpacity.value,
+  }));
 
   if (processedSnapshots.length < 2) {
     return (
@@ -226,13 +318,15 @@ export default function HealthTrendChart({ snapshots }: { snapshots: HealthSnaps
     );
   }
 
-  // Generate grid values
   const yTicks = [0, 25, 50, 75, 100];
   const scaleHeight = chartHeight - paddingTop - paddingBottom;
   const getTickY = (val: number) => chartHeight - paddingBottom - (val / 100) * scaleHeight;
+  const getX = (idx: number) =>
+    paddingLeft + (idx / (chartData.length - 1)) * (chartWidth - paddingLeft - paddingRight);
 
   return (
-    <Card style={styles.card}>
+    <View ref={containerRef} collapsable={false}>
+      <Card style={styles.card}>
       {/* Header */}
       <View style={styles.header}>
         <View>
@@ -243,7 +337,6 @@ export default function HealthTrendChart({ snapshots }: { snapshots: HealthSnaps
             Affordability score and DTI trend
           </Typography>
         </View>
-
         {/* Range Selector */}
         <View style={styles.rangeSelector}>
           {(['3M', '6M', '1Y'] as RangeKey[]).map((option) => (
@@ -253,11 +346,7 @@ export default function HealthTrendChart({ snapshots }: { snapshots: HealthSnaps
               style={[styles.rangeBtn, range === option && styles.rangeBtnActive]}
               activeOpacity={0.8}
             >
-              <Typography
-                variant="xs"
-                weight="bold"
-                color={range === option ? 'navy' : 'slate'}
-              >
+              <Typography variant="xs" weight="bold" color={range === option ? 'navy' : 'slate'}>
                 {option}
               </Typography>
             </TouchableOpacity>
@@ -302,55 +391,80 @@ export default function HealthTrendChart({ snapshots }: { snapshots: HealthSnaps
           <Line x1={paddingLeft} y1={getTickY(75)} x2={chartWidth - paddingRight} y2={getTickY(75)} stroke="#10B981" strokeWidth="1" strokeDasharray="2,2" />
           <Line x1={paddingLeft} y1={getTickY(50)} x2={chartWidth - paddingRight} y2={getTickY(50)} stroke="#F59E0B" strokeWidth="1" strokeDasharray="2,2" />
 
-          {/* Health Area Fill */}
-          {paths.healthArea ? <Path d={paths.healthArea} fill="url(#healthGrad)" /> : null}
+          {/* Health Area Fill — animated opacity */}
+          {paths.healthArea ? (
+            <AnimatedPath
+              d={paths.healthArea}
+              fill="url(#healthGrad)"
+              animatedProps={areaAnimProps}
+            />
+          ) : null}
 
-          {/* Health Line */}
-          {paths.healthLine ? <Path d={paths.healthLine} fill="none" stroke="#10B981" strokeWidth="3" /> : null}
+          {/* Health Line — animated draw-on via progress */}
+          {paths.healthLine ? (
+            <AnimatedPath
+              d={paths.healthLine}
+              fill="none"
+              stroke="#10B981"
+              strokeWidth="3"
+              animatedProps={healthLineAnimProps}
+            />
+          ) : null}
 
-          {/* Projection Line */}
-          {paths.projectionLine ? <Path d={paths.projectionLine} fill="none" stroke="#10B981" strokeWidth="2.5" strokeDasharray="4,4" /> : null}
+          {/* DTI Line — animated draw-on via progress */}
+          {paths.dtiLine ? (
+            <AnimatedPath
+              d={paths.dtiLine}
+              fill="none"
+              stroke="#F59E0B"
+              strokeWidth="2.2"
+              animatedProps={dtiLineAnimProps}
+            />
+          ) : null}
 
-          {/* DTI Line */}
-          {paths.dtiLine ? <Path d={paths.dtiLine} fill="none" stroke="#F59E0B" strokeWidth="2.2" strokeDasharray="4,4" /> : null}
+          {/* Projection Line — animated draw-on */}
+          {paths.projectionLine ? (
+            <AnimatedPath
+              d={paths.projectionLine}
+              fill="none"
+              stroke="#10B981"
+              strokeWidth="2.5"
+              strokeDasharray="4,4"
+              animatedProps={projLineAnimProps}
+            />
+          ) : null}
 
-          {/* Plot Data Dots */}
+          {/* Data Dots — fade in */}
           {chartData.map((d, i) => {
-            const getX = (idx: number) => paddingLeft + (idx / (chartData.length - 1)) * (chartWidth - paddingLeft - paddingRight);
             const x = getX(i);
-
             const isProjection = d.affordabilityScore === null;
             const scoreVal = isProjection ? d.projectedScore : d.affordabilityScore;
             const dtiVal = d.dtiRatioPercent;
-
             const yH = getTickY(scoreVal);
             const yD = getTickY(dtiVal);
 
             return (
               <React.Fragment key={i}>
-                {/* Health Dot */}
-                <Circle
+                <AnimatedCircle
                   cx={x}
                   cy={yH}
                   r={isProjection ? 3.5 : 4}
                   fill={isProjection ? Colors.white : '#10B981'}
                   stroke={isProjection ? '#10B981' : Colors.white}
                   strokeWidth={isProjection ? 2.2 : 1.5}
+                  animatedProps={dotAnimProps}
                 />
-
-                {/* DTI Dot (only for actual data, not projection) */}
                 {!isProjection && (
-                  <Circle
+                  <AnimatedCircle
                     cx={x}
                     cy={yD}
                     r={3}
                     fill={Colors.white}
                     stroke="#F59E0B"
                     strokeWidth={1.5}
+                    animatedProps={dotAnimProps}
                   />
                 )}
-
-                {/* X labels */}
                 {i % 2 === 0 && (
                   <SvgText
                     x={x}
@@ -377,7 +491,8 @@ export default function HealthTrendChart({ snapshots }: { snapshots: HealthSnaps
           {trendInsight}
         </Typography>
       </View>
-    </Card>
+      </Card>
+    </View>
   );
 }
 

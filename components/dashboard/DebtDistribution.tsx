@@ -1,9 +1,20 @@
-import React from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
+import React, { useEffect, useMemo, useRef } from 'react';
+import { View, StyleSheet } from 'react-native';
 import Svg, { Path, G, Text as SvgText } from 'react-native-svg';
+import Animated, {
+  useSharedValue,
+  useAnimatedProps,
+  withTiming,
+  withDelay,
+  cancelAnimation,
+  Easing,
+} from 'react-native-reanimated';
 import { Colors, Spacing } from '@/constants/theme';
 import Typography from '../ui/Typography';
 import { formatCurrency } from '@/lib/calculations';
+import { useInView } from '@/hooks/useInView';
+
+const AnimatedPath = Animated.createAnimatedComponent(Path);
 
 type DebtDistributionProps = {
   loans: Array<{
@@ -19,58 +30,112 @@ const STROKE_WIDTH = 20;
 const RADIUS = (CHART_SIZE - STROKE_WIDTH) / 2;
 const CENTER = CHART_SIZE / 2;
 
-export default function DebtDistribution({ loans, currencyCode = 'INR' }: DebtDistributionProps) {
-  const total = loans.reduce((s, l) => s + l.balance, 0);
-  
-  if (total === 0) return null;
+/**
+ * A single animated donut slice.
+ * Uses a 0→1 progress shared value to animate strokeDashoffset from arcLength → 0.
+ */
+function AnimatedSlice({
+  d,
+  color,
+  arcLength,
+  delayMs,
+  animKey,
+  isInView,
+}: {
+  d: string;
+  color: string;
+  arcLength: number;
+  delayMs: number;
+  animKey: string;
+  isInView: boolean;
+}) {
+  const progress = useSharedValue(0);
+  const arcLenRef = useRef(arcLength);
+  arcLenRef.current = arcLength;
 
-  let currentAngle = 0;
+  useEffect(() => {
+    if (!isInView) return;
+    cancelAnimation(progress);
+    progress.value = 0;
+    progress.value = withDelay(
+      delayMs,
+      withTiming(1, { duration: 700, easing: Easing.out(Easing.cubic) })
+    );
+  }, [animKey, isInView]);
+
+  const animatedProps = useAnimatedProps(() => {
+    'worklet';
+    const len = arcLenRef.current;
+    return {
+      strokeDasharray: `${len} ${len}`,
+      strokeDashoffset: len * (1 - progress.value),
+    };
+  });
 
   return (
-    <View style={styles.container}>
+    <AnimatedPath
+      d={d}
+      fill="none"
+      stroke={color}
+      strokeWidth={STROKE_WIDTH}
+      animatedProps={animatedProps}
+    />
+  );
+}
+
+export default function DebtDistribution({ loans, currencyCode = 'INR' }: DebtDistributionProps) {
+  const containerRef = useRef<View>(null);
+  const isInView = useInView(containerRef);
+  const total = loans.reduce((s, l) => s + l.balance, 0);
+
+  if (total === 0) return null;
+
+  const slices = useMemo(() => {
+    let currentAngle = 0;
+    return loans.map((loan) => {
+      const percentage = loan.balance / total;
+      const angle = percentage * 360;
+
+      const x1 = CENTER + RADIUS * Math.cos((currentAngle * Math.PI) / 180);
+      const y1 = CENTER + RADIUS * Math.sin((currentAngle * Math.PI) / 180);
+      const x2 = CENTER + RADIUS * Math.cos(((currentAngle + angle) * Math.PI) / 180);
+      const y2 = CENTER + RADIUS * Math.sin(((currentAngle + angle) * Math.PI) / 180);
+
+      const largeArcFlag = angle > 180 ? 1 : 0;
+      const d = `M ${x1} ${y1} A ${RADIUS} ${RADIUS} 0 ${largeArcFlag} 1 ${x2} ${y2}`;
+      const arcLength = Math.max(1, (angle / 360) * 2 * Math.PI * RADIUS);
+
+      currentAngle += angle;
+      return { name: loan.name, color: loan.color, d, arcLength };
+    });
+  }, [loans, total]);
+
+  // Stable key so AnimatedSlice effects retrigger when data genuinely changes
+  const animKey = loans.map(l => `${l.name}:${l.balance}`).join('|');
+
+  return (
+    <View ref={containerRef} collapsable={false} style={styles.container}>
       <Typography variant="body" weight="bold" color="navy" fontFamily="heading" style={styles.title}>
         Debt Distribution
       </Typography>
-      
+
       <View style={styles.content}>
         <View style={styles.chart}>
           <Svg width={CHART_SIZE} height={CHART_SIZE}>
             <G rotation="-90" origin={`${CENTER}, ${CENTER}`}>
-              {loans.map((loan, i) => {
-                const percentage = loan.balance / total;
-                const angle = percentage * 360;
-                
-                // Calculate path for donut slice
-                const x1 = CENTER + RADIUS * Math.cos((currentAngle * Math.PI) / 180);
-                const y1 = CENTER + RADIUS * Math.sin((currentAngle * Math.PI) / 180);
-                const x2 = CENTER + RADIUS * Math.cos(((currentAngle + angle) * Math.PI) / 180);
-                const y2 = CENTER + RADIUS * Math.sin(((currentAngle + angle) * Math.PI) / 180);
-                
-                const largeArcFlag = angle > 180 ? 1 : 0;
-                const d = `M ${x1} ${y1} A ${RADIUS} ${RADIUS} 0 ${largeArcFlag} 1 ${x2} ${y2}`;
-                
-                const slice = (
-                  <Path
-                    key={loan.name}
-                    d={d}
-                    fill="none"
-                    stroke={loan.color}
-                    strokeWidth={STROKE_WIDTH}
-                  />
-                );
-                
-                currentAngle += angle;
-                return slice;
-              })}
+              {slices.map((slice, i) => (
+                <AnimatedSlice
+                  key={slice.name}
+                  d={slice.d}
+                  color={slice.color}
+                  arcLength={slice.arcLength}
+                  delayMs={i * 150}
+                  animKey={animKey}
+                  isInView={isInView}
+                />
+              ))}
             </G>
-            {/* Center Text */}
-            <SvgText
-              x={CENTER}
-              y={CENTER - 5}
-              textAnchor="middle"
-              fontSize="10"
-              fill={Colors.slate}
-            >
+            <SvgText x={CENTER} y={CENTER - 5} textAnchor="middle" fontSize="10" fill={Colors.slate}>
               Total
             </SvgText>
             <SvgText
@@ -138,4 +203,3 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 });
-

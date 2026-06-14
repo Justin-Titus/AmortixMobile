@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import Animated, {
@@ -8,6 +8,7 @@ import Animated, {
   withDelay,
   Easing,
 } from 'react-native-reanimated';
+import { useInView } from '@/hooks/useInView';
 import { getAffordabilityZoneLabel } from '@/lib/calculations';
 import Typography from '../ui/Typography';
 import { Colors } from '@/constants/theme';
@@ -25,6 +26,8 @@ function getGaugeColor(score: number) {
 }
 
 export default function AffordabilityGauge({ score }: AffordabilityGaugeProps) {
+  const containerRef = useRef<View>(null);
+  const isInView = useInView(containerRef);
   const normalizedScore = Number.isFinite(score) ? score : 0;
   const safeScore = Math.min(100, Math.max(0, normalizedScore));
   const radius = 62;
@@ -35,13 +38,14 @@ export default function AffordabilityGauge({ score }: AffordabilityGaugeProps) {
   const animatedProgress = useSharedValue(circumference);
 
   useEffect(() => {
+    if (!isInView) return;
     const progress = circumference * (1 - safeScore / 100);
     animatedProgress.value = circumference; // Reset on load
     animatedProgress.value = withDelay(150, withTiming(progress, {
       duration: 1200,
       easing: Easing.out(Easing.cubic),
     }));
-  }, [safeScore, circumference]);
+  }, [safeScore, circumference, isInView]);
 
   const animatedProps = useAnimatedProps(() => ({
     strokeDashoffset: animatedProgress.value,
@@ -50,7 +54,7 @@ export default function AffordabilityGauge({ score }: AffordabilityGaugeProps) {
   const zoneLabel = getAffordabilityZoneLabel(safeScore);
 
   return (
-    <View style={styles.container}>
+    <View ref={containerRef} collapsable={false} style={styles.container}>
       <Svg width={160} height={90} viewBox="0 0 160 90">
         {/* Background Arc */}
         <Path
