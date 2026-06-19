@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, View, TouchableOpacity } from 'react-native';
 import { Input } from '@/components/ui/Input';
-import { Colors, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
 import Typography from '@/components/ui/Typography';
 
 interface AuthInputProps extends React.ComponentProps<typeof Input> {

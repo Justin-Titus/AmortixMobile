@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
-  Text,
   TouchableOpacity,
   StyleSheet,
   Alert,
@@ -14,6 +13,8 @@ import { AuthContainer } from '@/components/auth/AuthContainer';
 import { AuthHeader } from '@/components/auth/AuthHeader';
 import { AuthInput } from '@/components/auth/AuthInput';
 import { AuthButton } from '@/components/auth/AuthButton';
+import Typography from '@/components/ui/Typography';
+import { sha1 } from '@/lib/utils/sha1';
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -65,6 +66,28 @@ export default function RegisterScreen() {
     }
 
     setIsSubmitting(true);
+    
+    try {
+      const hash = sha1(password);
+      const prefix = hash.slice(0, 5);
+      const suffix = hash.slice(5);
+
+      const checkResponse = await fetch(`https://api.pwnedpasswords.com/range/${prefix}`);
+      if (checkResponse.ok) {
+        const data = await checkResponse.text();
+        const hashes = data.split('\n');
+        const leaked = hashes.some((h) => h.trim().split(':')[0] === suffix);
+        
+        if (leaked) {
+          setError('This password has been compromised in a data breach. Please select a different password.');
+          setIsSubmitting(false);
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to verify password breach status, proceeding...', e);
+    }
+
     const result = await signUp(name.trim(), email.trim(), password);
     if (result.error) {
       setError(result.error);
@@ -82,7 +105,6 @@ export default function RegisterScreen() {
     { label: '8+ characters', satisfied: password.length >= 8 },
     { label: 'Uppercase', satisfied: /[A-Z]/.test(password) },
     { label: 'Number', satisfied: /[0-9]/.test(password) },
-    { label: 'Special char', satisfied: /[^A-Za-z0-9]/.test(password) },
   ], [password]);
 
   return (
@@ -96,13 +118,13 @@ export default function RegisterScreen() {
         {/* Error */}
         {error && (
           <View style={styles.errorBox}>
-            <Text style={styles.errorText}>{error}</Text>
+            <Typography style={styles.errorText}>{error}</Typography>
           </View>
         )}
 
         <AuthInput
           label="Full name"
-          placeholder="John Doe"
+          placeholder="Your full name"
           value={name}
           onChangeText={setName}
           autoCapitalize="words"
@@ -111,7 +133,7 @@ export default function RegisterScreen() {
 
         <AuthInput
           label="Email address"
-          placeholder="johndoe@gmail.com"
+          placeholder="you@example.com"
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
@@ -140,12 +162,12 @@ export default function RegisterScreen() {
                   color={v.satisfied ? Colors.emerald : Colors.slateLight} 
                   strokeWidth={3} 
                 />
-                <Text style={[
+                <Typography style={[
                   styles.validationLabel, 
                   v.satisfied && styles.validationLabelSatisfied
                 ]}>
                   {v.label}
-                </Text>
+                </Typography>
               </View>
             ))}
           </View>
@@ -169,23 +191,23 @@ export default function RegisterScreen() {
         />
 
         <View style={styles.termsFooter}>
-          <Text style={styles.termsText}>
+          <Typography style={styles.termsText}>
             By signing up, you agree to our{' '}
-          </Text>
+          </Typography>
           <TouchableOpacity onPress={() => router.push('/terms')}>
-            <Text style={styles.termsLink}>Terms of Service</Text>
+            <Typography style={styles.termsLink}>Terms of Service</Typography>
           </TouchableOpacity>
-          <Text style={styles.termsText}> and </Text>
+          <Typography style={styles.termsText}> and </Typography>
           <TouchableOpacity onPress={() => router.push('/privacy')}>
-            <Text style={styles.termsLink}>Privacy Policy</Text>
+            <Typography style={styles.termsLink}>Privacy Policy</Typography>
           </TouchableOpacity>
-          <Text style={styles.termsText}>.</Text>
+          <Typography style={styles.termsText}>.</Typography>
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Already have an account? </Text>
+          <Typography style={styles.footerText}>Already have an account? </Typography>
           <TouchableOpacity onPress={() => router.push('/(auth)/login')}>
-            <Text style={styles.footerLink}>Sign in</Text>
+            <Typography style={styles.footerLink}>Sign in</Typography>
           </TouchableOpacity>
         </View>
       </View>

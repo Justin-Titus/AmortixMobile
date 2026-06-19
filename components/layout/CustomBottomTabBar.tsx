@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   tabLabel: {
-    lineHeight: 10,
+    lineHeight: 14,
     fontSize: 10,
   },
 });

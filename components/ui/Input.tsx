@@ -8,7 +8,7 @@ import {
   type ViewStyle,
   type StyleProp,
 } from 'react-native';
-import { Colors, Radius, FontSizes, Spacing, FontFamilies } from '@/constants/theme';
+import { Colors, FontSizes, Spacing, FontFamilies } from '@/constants/theme';
 import Typography from './Typography';
 
 type InputProps = TextInputProps & {

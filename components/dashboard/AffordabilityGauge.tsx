@@ -11,7 +11,7 @@ import Animated, {
 import { useInView } from '@/hooks/useInView';
 import { getAffordabilityZoneLabel } from '@/lib/calculations';
 import Typography from '../ui/Typography';
-import { Colors } from '@/constants/theme';
+
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 

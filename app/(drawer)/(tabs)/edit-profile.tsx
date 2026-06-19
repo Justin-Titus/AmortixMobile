@@ -1,13 +1,13 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View, ScrollView, TouchableOpacity, KeyboardAvoidingView,
   Platform, StyleSheet, Alert,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { getProfile, updateProfile, type FinancialProfile } from '@/services/profile';
+import { getProfile, updateProfile } from '@/services/profile';
 import { Input } from '@/components/ui/Input';
 import { Colors, Radius, Spacing, Shadows } from '@/constants/theme';
-import { Save, ArrowLeft } from 'lucide-react-native';
+import { Save } from 'lucide-react-native';
 import Typography from '@/components/ui/Typography';
 import { CURRENCIES, getCurrencyConfig } from '@/lib/calculations';
 import { Skeleton } from '@/components/ui/Skeleton';

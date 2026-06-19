@@ -10,7 +10,7 @@ import { Card } from '@/components/ui/Card';
 import Typography from '@/components/ui/Typography';
 import { Colors, Spacing, Radius } from '@/constants/theme';
 import { formatCurrency } from '@/lib/calculations';
-import { Mail, Briefcase, Shield, PiggyBank, LogOut, ChevronRight, LifeBuoy, FileText, Lock, HelpCircle, Coins, TrendingUp, TrendingDown } from 'lucide-react-native';
+import { Briefcase, Shield, PiggyBank, LogOut, ChevronRight, LifeBuoy, FileText, Lock, HelpCircle, Coins, TrendingUp, TrendingDown } from 'lucide-react-native';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useOfflineData } from '@/hooks/useOfflineData';
 import { saveOfflineProfile, getOfflineProfile, saveOfflineUserData, getOfflineUserData } from '@/lib/offline/cache';

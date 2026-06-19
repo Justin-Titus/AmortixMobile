@@ -35,6 +35,12 @@ function riskBg(result: DefaultRiskResult): string {
   return Colors.redBg;
 }
 
+function riskBorderColor(result: DefaultRiskResult): string {
+  if (result.riskLevel === 'low') return Colors.emerald;
+  if (result.riskLevel === 'medium') return Colors.amber;
+  return Colors.red;
+}
+
 export default function DefaultRiskCard({
   riskInput,
   currencyCode = 'INR',
@@ -78,7 +84,7 @@ export default function DefaultRiskCard({
         <Typography variant="xs" weight="bold" color="slate" style={styles.label}>
           DEFAULT RISK (3M)
         </Typography>
-        <View style={[styles.badge, { backgroundColor: riskBg(risk), borderColor: activeColor }]}>
+        <View style={[styles.badge, { backgroundColor: riskBg(risk), borderColor: riskBorderColor(risk) }]}>
           <Typography
             variant="xs"
             weight="bold"

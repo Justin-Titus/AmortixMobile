@@ -146,6 +146,8 @@ const styles = StyleSheet.create({
   logo: {
     width: 32,
     height: 32,
+    tintColor: '#00bc7d',
+    transform: [{ scale: 1.4 }],
   },
   brandTagline: {
     letterSpacing: 0.4,

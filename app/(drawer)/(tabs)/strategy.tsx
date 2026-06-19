@@ -9,7 +9,7 @@ import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';
 import Typography from '@/components/ui/Typography';
-import { Colors, Spacing, Radius, Shadows } from '@/constants/theme';
+import { Colors, Spacing, Radius } from '@/constants/theme';
 import { useOfflineData } from '@/hooks/useOfflineData';
 import {
   saveOfflineLoans, getOfflineLoans,
@@ -20,7 +20,7 @@ import { exportAmortizationSchedulePDF } from '@/lib/export/pdf';
 import { formatCurrency, compareAllStrategies, getCurrencyConfig } from '@/lib/calculations';
 import { Target, Zap, Snowflake, FileText } from 'lucide-react-native';
 import EMIOptimizerPanel from '@/components/strategy/EMIOptimizerPanel';
-import ExtraPaymentSimulator from '@/components/strategy/ExtraPaymentSimulator';
+
 import AmortizationTable from '@/components/strategy/AmortizationTable';
 import StrategyComparisonChart from '@/components/strategy/StrategyComparisonChart';
 import { Skeleton } from '@/components/ui/Skeleton';

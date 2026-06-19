@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { StyleSheet, View, Image } from 'react-native';
 import { Colors, Spacing, Shadows } from '@/constants/theme';
 import Typography from '@/components/ui/Typography';
@@ -37,9 +37,9 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   logoWrap: {
-    width: 64,
-    height: 64,
-    borderRadius: 16,
+    width: 80,
+    height: 80,
+    borderRadius: 20,
     backgroundColor: Colors.white,
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.05)',
@@ -50,8 +50,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
   },
   logo: {
-    width: 40,
-    height: 40,
+    width: 52,
+    height: 52,
   },
   title: {
     marginBottom: Spacing.xs,

@@ -12,7 +12,7 @@ import { clearCachedLoans } from '@/lib/offline/cache';
 import { Input } from '@/components/ui/Input';
 import { Colors, Radius, Spacing, Shadows } from '@/constants/theme';
 import { calculateEMI, calculateTenure, CURRENCIES, getCurrencyConfig } from '@/lib/calculations';
-import { Save, Plus, ArrowLeft, Calendar as CalendarIcon } from 'lucide-react-native';
+import { Save, Plus, Calendar as CalendarIcon } from 'lucide-react-native';
 import Typography from '@/components/ui/Typography';
 import { Skeleton } from '@/components/ui/Skeleton';
 

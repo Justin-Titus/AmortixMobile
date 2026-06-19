@@ -1,10 +1,10 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import {
   View, ScrollView, TouchableOpacity, Alert, StyleSheet, RefreshControl, Vibration,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { getLoan, deleteLoan, getLoans, type LoanRecord } from '@/services/loans';
-import { getProfile, type FinancialProfile } from '@/services/profile';
+import { getLoan, deleteLoan, getLoans } from '@/services/loans';
+import { getProfile } from '@/services/profile';
 import { clearCachedLoans, getOfflineLoans, getOfflineLoansWithPayments, getOfflineProfile } from '@/lib/offline/cache';
 import { useOfflineData } from '@/hooks/useOfflineData';
 import { loanHealthScore, monthsSince, formatCurrency, getCurrencyConfig } from '@/lib/calculations';

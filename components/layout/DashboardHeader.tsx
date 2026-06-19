@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
-import { View, StyleSheet, TouchableOpacity, Alert } from 'react-native';
-import { Colors, Spacing, Shadows } from '@/constants/theme';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { Colors, Spacing } from '@/constants/theme';
 import { Menu, Bell, ArrowLeft } from 'lucide-react-native';
 import { useRouter, useNavigation, useFocusEffect } from 'expo-router';
 import { DrawerActions } from '@react-navigation/native';
@@ -91,7 +91,18 @@ export default function DashboardHeader({ title, context = 'Workspace', showBack
             <Bell size={20} color={Colors.slate} />
             {unreadCount > 0 && (
               <View style={styles.badge}>
-                <Typography variant="caption" color="white" style={{ fontSize: 9, fontWeight: 'bold' }}>
+                <Typography 
+                  variant="caption" 
+                  color="white" 
+                  style={{ 
+                    fontSize: 9, 
+                    fontWeight: 'bold', 
+                    lineHeight: 9,
+                    textAlign: 'center',
+                    textAlignVertical: 'center',
+                    includeFontPadding: false
+                  }}
+                >
                   {unreadCount > 9 ? '9+' : unreadCount}
                 </Typography>
               </View>

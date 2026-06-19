@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { View, StyleSheet } from 'react-native';
 import { Calculator } from 'lucide-react-native';
 import { Colors, Spacing, Radius, Shadows } from '@/constants/theme';

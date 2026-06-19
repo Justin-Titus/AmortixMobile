@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import {
   View,
-  Text,
   TouchableOpacity,
   StyleSheet,
   Alert,
@@ -14,6 +13,7 @@ import { AuthContainer } from '@/components/auth/AuthContainer';
 import { AuthHeader } from '@/components/auth/AuthHeader';
 import { AuthInput } from '@/components/auth/AuthInput';
 import { AuthButton } from '@/components/auth/AuthButton';
+import Typography from '@/components/ui/Typography';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
@@ -55,13 +55,13 @@ export default function ForgotPasswordScreen() {
         {/* Error */}
         {error && (
           <View style={styles.errorBox}>
-            <Text style={styles.errorText}>{error}</Text>
+            <Typography style={styles.errorText}>{error}</Typography>
           </View>
         )}
 
         <AuthInput
           label="Email address"
-          placeholder="johndoe@gmail.com"
+          placeholder="you@example.com"
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
@@ -82,7 +82,7 @@ export default function ForgotPasswordScreen() {
           onPress={() => router.back()}
           activeOpacity={0.7}
         >
-          <Text style={styles.backButtonText}>Back to sign in</Text>
+          <Typography style={styles.backButtonText}>Back to sign in</Typography>
         </TouchableOpacity>
       </View>
     </AuthContainer>

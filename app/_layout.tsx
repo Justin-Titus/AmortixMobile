@@ -5,7 +5,15 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import * as SplashScreen from 'expo-splash-screen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
+
+// Set global default font family for standard React Native Text components to prevent phone's system font leakage
+if ((Text as any).defaultProps == null) {
+  (Text as any).defaultProps = {};
+}
+(Text as any).defaultProps.style = {
+  fontFamily: 'Manrope',
+};
 import { 
   useFonts,
   SpaceGrotesk_400Regular,
@@ -80,7 +88,14 @@ export default function RootLayout() {
             <GlobalSyncInitializer />
             <AutoSyncInitializer />
             <StatusBar style="dark" />
-            <Stack screenOptions={{ headerShown: false }}>
+            <Stack screenOptions={{ 
+              headerShown: false,
+              headerTitleStyle: {
+                fontFamily: 'SpaceGrotesk-SemiBold',
+                fontSize: 16,
+              },
+              headerTintColor: '#0d1b2f',
+            }}>
               <Stack.Screen name="(auth)" />
               <Stack.Screen name="(drawer)" />
               <Stack.Screen name="terms" options={{ headerShown: true, title: 'Terms of Service' }} />

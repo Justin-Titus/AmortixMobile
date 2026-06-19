@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { Colors, Spacing, Radius } from '@/constants/theme';
 import Typography from '../ui/Typography';
 import { formatCurrency, type MonthlyAllocation } from '@/lib/calculations';

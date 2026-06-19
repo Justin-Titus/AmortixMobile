@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { ScrollView, View, StyleSheet, Linking, TouchableOpacity } from 'react-native';
 import { Colors, Spacing } from '@/constants/theme';
 import { Scale, FileText, CheckCircle, AlertTriangle } from 'lucide-react-native';

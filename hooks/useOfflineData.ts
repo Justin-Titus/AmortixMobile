@@ -34,6 +34,7 @@ export function useOfflineData<T>({ fetcher, cacher, reader }: UseOfflineDataOpt
       if (syncTime) {
         setData(cachedData);
         setLastSync(syncTime);
+        setLoading(false); // Set loading to false immediately to render cached data while fetching in background
       }
     } catch (e) {
       console.error('Failed to pre-load cached data', e);

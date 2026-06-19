@@ -8,10 +8,11 @@
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "scheme": "amortix",
+    "jsEngine": "hermes",
     "splash": {
-      "image": "./assets/Amortix-adaptive.png",
+      "image": "./assets/Amortix.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0d1b2f"
+      "backgroundColor": "#ffffff"
     },
     "ios": {
       "supportsTablet": true,
@@ -20,10 +21,10 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/Amortix-adaptive.png",
-        "backgroundColor": "#0d1b2f"
+        "backgroundColor": "#ffffff"
       },
-
-      "package": "com.amortix.app"
+      "package": "com.amortix.app",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "favicon": "./assets/Amortix.png",
@@ -39,6 +40,15 @@
         "@react-native-google-signin/google-signin",
         {
           "iosUrlScheme": "com.googleusercontent.apps.167295983795-s0bgl7ntu3ngenaa3gravk65s13d8i8h"
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableProguardInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true
+          }
         }
       ]
     ],

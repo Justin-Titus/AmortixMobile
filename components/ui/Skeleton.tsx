@@ -7,7 +7,7 @@ import Animated, {
   withTiming,
   withSequence,
 } from 'react-native-reanimated';
-import { Colors } from '@/constants/theme';
+
 
 interface SkeletonProps {
   width?: number | string;

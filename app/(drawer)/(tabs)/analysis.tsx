@@ -4,12 +4,12 @@ import {
 } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { getLoans, type LoanRecord } from '@/services/loans';
-import { getProfile, type FinancialProfile } from '@/services/profile';
+import { getProfile } from '@/services/profile';
 import { Card } from '@/components/ui/Card';
 import { MetricCard } from '@/components/ui/MetricCard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import Typography from '@/components/ui/Typography';
-import { Colors, Spacing, Radius, Shadows } from '@/constants/theme';
+import { Colors, Spacing, Radius } from '@/constants/theme';
 import { useOfflineData } from '@/hooks/useOfflineData';
 import {
   saveOfflineLoans, getOfflineLoans,

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text as RNText, TextProps, StyleSheet, TextStyle } from 'react-native';
+import { Text as RNText, TextProps, TextStyle } from 'react-native';
 import { Colors, FontSizes, FontFamilies } from '@/constants/theme';
 
 export type TypographyVariant = 
@@ -61,13 +61,19 @@ const Typography: React.FC<TypographyProps> = ({
     }
   };
 
+  // Calculate a proportional default line height to prevent descender clipping
+  // and improve general reading rhythm (headings ~1.3x, body ~1.45x).
+  const defaultLineHeight = ['hero', 'h1', 'h2', 'h3'].includes(variant)
+    ? Math.round(FontSizes[variant] * 1.3)
+    : Math.round(FontSizes[variant] * 1.45);
+
   const textStyle: TextStyle = {
     fontSize: FontSizes[variant],
     fontFamily: getFontFamily(),
     color: (Colors as any)[color] || color, // Fallback to literal color if not in theme
     textAlign: align,
-    includeFontPadding: false,
-    textAlignVertical: 'center',
+    lineHeight: defaultLineHeight,
+    includeFontPadding: true,
   };
 
   return (

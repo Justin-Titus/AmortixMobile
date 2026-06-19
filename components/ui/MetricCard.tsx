@@ -1,6 +1,6 @@
-import React from 'react';
+
 import { View, StyleSheet, type ViewStyle } from 'react-native';
-import { Colors, Radius, Shadows, Spacing } from '@/constants/theme';
+import { Colors, Shadows, Spacing } from '@/constants/theme';
 import Typography from './Typography';
 
 type MetricCardProps = {

@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { Colors, Spacing, Radius, Shadows } from '@/constants/theme';
 import { CalendarDays, ChevronLeft, ChevronRight, Info } from 'lucide-react-native';
 import { getLoansWithPayments } from '@/services/loans';
 import { getProfile } from '@/services/profile';
-import { buildCalendarData, formatDateKey, RawLoan, formatCurrency, getCurrencyConfig } from '@/lib/calculations';
+import { buildCalendarData, formatDateKey, formatCurrency, getCurrencyConfig } from '@/lib/calculations';
 import { EmptyState } from '@/components/ui/EmptyState';
 import Typography from '@/components/ui/Typography';
 import { useOfflineData } from '@/hooks/useOfflineData';

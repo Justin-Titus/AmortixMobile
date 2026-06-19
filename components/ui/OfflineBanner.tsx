@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { View, StyleSheet } from 'react-native';
 import { WifiOff } from 'lucide-react-native';
 import Typography from '@/components/ui/Typography';

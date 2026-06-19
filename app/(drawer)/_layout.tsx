@@ -34,7 +34,7 @@ export default function DrawerLayout() {
         drawerStyle: {
           width: 280,
         },
-        swipeEdgeWidth: 100,
+        swipeEdgeWidth: 50,
       }}
     >
       <Drawer.Screen 

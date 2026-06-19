@@ -1,7 +1,7 @@
 import { Tabs, Redirect } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { View, ActivityIndicator, StyleSheet, Platform } from 'react-native';
-import { Colors, Shadows } from '@/constants/theme';
+import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { Colors } from '@/constants/theme';
 import {
   LayoutDashboard, BarChart3, Target, TrendingUp, MessageSquare,
 } from 'lucide-react-native';

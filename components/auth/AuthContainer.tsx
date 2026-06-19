@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Spacing } from '@/constants/theme';
+import { LandingBackdrop } from '@/components/landing/LandingBackdrop';
 
 interface AuthContainerProps {
   children: React.ReactNode;
@@ -23,10 +24,7 @@ export function AuthContainer({ children, scrollEnabled = true }: AuthContainerP
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.flex}
       >
-        <View style={styles.blurContainer}>
-          <View style={styles.blurEmerald} />
-          <View style={styles.blurAmber} />
-        </View>
+        <LandingBackdrop />
 
         <ScrollView
           style={styles.flex}
@@ -51,28 +49,6 @@ const styles = StyleSheet.create({
   },
   flex: {
     flex: 1,
-  },
-  blurContainer: {
-    ...StyleSheet.absoluteFillObject,
-    overflow: 'hidden',
-  },
-  blurEmerald: {
-    position: 'absolute',
-    top: -40,
-    left: -60,
-    width: 280,
-    height: 280,
-    borderRadius: 140,
-    backgroundColor: 'rgba(17,140,118,0.05)',
-  },
-  blurAmber: {
-    position: 'absolute',
-    bottom: 100,
-    right: -80,
-    width: 320,
-    height: 320,
-    borderRadius: 160,
-    backgroundColor: 'rgba(245,159,58,0.05)',
   },
   scrollContent: {
     flexGrow: 1,

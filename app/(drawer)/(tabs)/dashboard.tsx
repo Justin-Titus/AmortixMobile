@@ -316,9 +316,8 @@ export default function DashboardScreen() {
           ))}
         </View>
 
-        {/* Actions */}
         <View style={s.heroActions}>
-          <TouchableOpacity style={s.primaryBtn} onPress={() => !isOffline && router.push('/(drawer)/(tabs)/loans/add')} disabled={isOffline}>
+          <TouchableOpacity style={[s.primaryBtn, isOffline && { opacity: 0.5 }]} onPress={() => !isOffline && router.push('/(drawer)/(tabs)/loans/add')} disabled={isOffline}>
             <Typography weight="bold" color="white">Add loan</Typography>
             <ArrowRight size={14} color={Colors.white} />
           </TouchableOpacity>
@@ -421,7 +420,7 @@ export default function DashboardScreen() {
           </View>
 
           <TouchableOpacity 
-            style={s.cardActionBtn} 
+            style={[s.cardActionBtn, isOffline && { opacity: 0.5 }]} 
             onPress={() => !isOffline && router.push('/(drawer)/(tabs)/loans/add')}
             disabled={isOffline}
           >
