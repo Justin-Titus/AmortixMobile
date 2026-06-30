@@ -61,27 +61,12 @@ export function usePushNotifications() {
 
       console.log('Expo Push Token generated successfully:', token);
       setExpoPushToken(token);
-
-      // Save token to Supabase User Profile
-      const { data: { session } } = await supabase.auth.getSession();
-      const user = session?.user;
-      if (user) {
-        const { error } = await supabase
-          .from('User')
-          .update({ expoPushToken: token })
-          .eq('id', user.id);
-
-        if (error) {
-          console.error('Failed to register push token in database:', error);
-        } else {
-          console.log('Registered push token in database successfully!');
-        }
-      }
     } catch (e) {
       console.error('Error during push token registration:', e);
     }
   }
 
+  // 1. Initial register call on mount
   useEffect(() => {
     registerForPushNotificationsAsync();
 
@@ -108,6 +93,41 @@ export function usePushNotifications() {
       }
     };
   }, []);
+
+  // 2. Save token to Supabase User Profile whenever token or auth state changes
+  useEffect(() => {
+    if (!expoPushToken) return;
+
+    const saveToken = async (userId: string) => {
+      const { error } = await supabase
+        .from('User')
+        .update({ expoPushToken: expoPushToken })
+        .eq('id', userId);
+      if (error) {
+        console.error('Failed to register push token in database:', error);
+      } else {
+        console.log('Registered push token in database successfully!');
+      }
+    };
+
+    // Try to save token immediately if user is already logged in
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        saveToken(session.user.id);
+      }
+    });
+
+    // Listen for auth changes to save token when user logs in later
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user) {
+        saveToken(session.user.id);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [expoPushToken]);
 
   return { expoPushToken, notification };
 }
