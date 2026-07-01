@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { Colors, Spacing, Radius, Shadows } from '@/constants/theme';
 import { CalendarDays, ChevronLeft, ChevronRight, Info } from 'lucide-react-native';
 import { getLoansWithPayments } from '@/services/loans';
@@ -17,6 +17,7 @@ import OfflineBanner from '@/components/ui/OfflineBanner';
 import { Skeleton } from '@/components/ui/Skeleton';
 
 export default function CalendarScreen() {
+  const router = useRouter();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
@@ -62,7 +63,9 @@ export default function CalendarScreen() {
 
   const loans = useMemo(() => {
     const rawLoans = data?.loans ?? [];
-    return rawLoans.map(l => ({
+    return rawLoans
+      .filter(l => l.outstandingBalance > 0)
+      .map(l => ({
       id: l.id,
       name: l.name,
       emiAmount: l.emiAmount,
@@ -285,7 +288,11 @@ export default function CalendarScreen() {
         ) : selectedDay ? (
           <View style={styles.dayList}>
             {selectedDay.loans.map(l => (
-              <View key={l.loanId} style={styles.dueItem}>
+              <TouchableOpacity
+                key={l.loanId}
+                style={styles.dueItem}
+                onPress={() => router.push({ pathname: '/(drawer)/(tabs)/loans/[id]', params: { id: l.loanId } })}
+              >
                 <View style={styles.dueMain}>
                   <Typography weight="medium" color="navy" fontFamily="heading">{l.loanName}</Typography>
                   <Typography weight="bold" color="navy" fontFamily="heading">{formatCurrency(l.emiAmount, currencyCode)}</Typography>
@@ -296,7 +303,7 @@ export default function CalendarScreen() {
                   </Typography>
                   <Typography variant="xs" color="slate">Paid {formatCurrency(l.paidAmount, currencyCode)}</Typography>
                 </View>
-              </View>
+              </TouchableOpacity>
             ))}
           </View>
         ) : (
@@ -307,7 +314,11 @@ export default function CalendarScreen() {
               </Typography>
             ) : (
               dueThisMonth.map((item: any, idx) => (
-                <View key={idx} style={[styles.dueItem, item.status === 'paid' ? {backgroundColor: '#ecfdf5', opacity: 0.8} : item.status === 'overdue' ? {backgroundColor: '#fef2f2'} : {}]}>
+                <TouchableOpacity
+                  key={idx}
+                  style={[styles.dueItem, item.status === 'paid' ? {backgroundColor: '#ecfdf5', opacity: 0.8} : item.status === 'overdue' ? {backgroundColor: '#fef2f2'} : {}]}
+                  onPress={() => router.push({ pathname: '/(drawer)/(tabs)/loans/[id]', params: { id: item.loanId } })}
+                >
                   <View style={styles.dueMain}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                       <Typography weight="medium" color={item.status === 'paid' ? 'emerald' : item.status === 'overdue' ? 'red' : 'navy'} fontFamily="heading" style={item.status === 'paid' ? {textDecorationLine: 'line-through'} : {}}>
@@ -329,7 +340,7 @@ export default function CalendarScreen() {
                     </Typography>
                   </View>
                   <Typography weight="bold" color={item.status === 'paid' ? 'emerald' : item.status === 'overdue' ? 'red' : 'navy'} fontFamily="heading">{formatCurrency(item.amount, currencyCode)}</Typography>
-                </View>
+                </TouchableOpacity>
               ))
             )}
           </View>

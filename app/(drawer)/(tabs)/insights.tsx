@@ -48,20 +48,22 @@ export default function InsightsScreen() {
 
   const currencyCode = profile?.currency ?? 'INR';
 
+  const activeLoans = useMemo(() => loans.filter(l => l.outstandingBalance > 0), [loans]);
+
   const totals = useMemo(() => {
-    const outstanding = loans.reduce((sum, loan) => sum + loan.outstandingBalance, 0);
-    const emi = loans.reduce((sum, loan) => sum + loan.emiAmount, 0);
+    const outstanding = activeLoans.reduce((sum, loan) => sum + loan.outstandingBalance, 0);
+    const emi = activeLoans.reduce((sum, loan) => sum + loan.emiAmount, 0);
     // Use balance-weighted average (consistent with dashboard.tsx)
     const avgRate = outstanding > 0
-      ? loans.reduce((sum, loan) => sum + loan.interestRate * loan.outstandingBalance, 0) / outstanding
+      ? activeLoans.reduce((sum, loan) => sum + loan.interestRate * loan.outstandingBalance, 0) / outstanding
       : 0;
     return { outstanding, emi, avgRate };
-  }, [loans]);
+  }, [activeLoans]);
 
   const leaks = useMemo(() => {
     if (!profile) return [];
     return detectInterestLeaks(
-      loans.map(l => ({
+      activeLoans.map(l => ({
         id: l.id,
         name: l.name,
         interestRate: l.interestRate,
@@ -80,11 +82,11 @@ export default function InsightsScreen() {
       },
       currencyCode
     );
-  }, [loans, profile, currencyCode]);
+  }, [activeLoans, profile, currencyCode]);
 
   const riskRows = useMemo(() => {
     if (!profile) return [];
-    return loans.map(loan => {
+    return activeLoans.map(loan => {
       const result = predictDefaultRisk({
         monthlyIncome: profile.monthlyIncome,
         monthlyExpenses: profile.monthlyExpenses,
@@ -100,7 +102,7 @@ export default function InsightsScreen() {
         emiAmount: loan.emiAmount,
         monthsActive: monthsSince(loan.startDate),
         totalMonthlyEMI: totals.emi,
-        numberOfActiveLoans: loans.length,
+        numberOfActiveLoans: activeLoans.length,
         debtToIncomeRatio: profile.monthlyIncome > 0 ? totals.emi / profile.monthlyIncome : 1,
       }, currencyCode);
 
@@ -110,7 +112,7 @@ export default function InsightsScreen() {
         risk: result,
       };
     }).sort((a, b) => b.risk.riskScore - a.risk.riskScore).slice(0, 3);
-  }, [loans, profile, totals.emi, currencyCode]);
+  }, [activeLoans, profile, totals.emi, currencyCode]);
 
   if (loading) {
     return (
@@ -164,7 +166,7 @@ export default function InsightsScreen() {
     );
   }
 
-  if (loans.length === 0) {
+  if (activeLoans.length === 0) {
     return (
     <ScrollView
       style={styles.container}
@@ -214,7 +216,7 @@ export default function InsightsScreen() {
             {[
               { label: 'Monthly income and expenses', done: false },
               { label: 'Emergency fund status', done: false },
-              { label: 'At least one active loan', done: loans.length > 0 },
+              { label: 'At least one active loan', done: activeLoans.length > 0 },
             ].map((item, i) => (
               <View key={i} style={styles.lockItem}>
                 <View style={[styles.checkCircle, item.done && styles.checkCircleDone]}>

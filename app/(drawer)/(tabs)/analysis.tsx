@@ -55,21 +55,22 @@ export default function AnalysisScreen() {
 
   const currencyCode = profile?.currency ?? 'INR';
 
-  const totalOutstanding = loans.reduce((s, l) => s + l.outstandingBalance, 0);
-  const totalEMI = loans.reduce((s, l) => s + l.emiAmount, 0);
+  const activeLoans = loans.filter(l => l.outstandingBalance > 0);
+  const totalOutstanding = activeLoans.reduce((s, l) => s + l.outstandingBalance, 0);
+  const totalEMI = activeLoans.reduce((s, l) => s + l.emiAmount, 0);
   const dti = profile?.monthlyIncome ? (totalEMI / profile.monthlyIncome) * 100 : 0;
   const surplus = profile ? (profile.monthlyIncome - profile.monthlyExpenses - totalEMI) : 0;
-  const highRiskLoans = loans.filter(l => l.interestRate >= 15);
+  const highRiskLoans = activeLoans.filter(l => l.interestRate >= 15);
   
   const totalInterestPerMonth = useMemo(() => {
-    return loans.reduce((s, l) => {
+    return activeLoans.reduce((s, l) => {
       const monthlyRate = l.interestRate / 12 / 100;
       return s + (l.outstandingBalance * monthlyRate);
     }, 0);
-  }, [loans]);
+  }, [activeLoans]);
 
   const leakData = useMemo(() => {
-    return loans
+    return activeLoans
       .map(loan => {
         const monthlyInt = loan.outstandingBalance * (loan.interestRate / 12 / 100);
         return {
@@ -81,7 +82,7 @@ export default function AnalysisScreen() {
         };
       })
       .sort((a, b) => b.monthlyInterest - a.monthlyInterest);
-  }, [loans, totalInterestPerMonth]);
+  }, [activeLoans, totalInterestPerMonth]);
 
   if (loading) {
     return (
@@ -168,7 +169,7 @@ export default function AnalysisScreen() {
         </Typography>
       </View>
 
-      {loans.length === 0 ? (
+      {activeLoans.length === 0 ? (
         <Card>
           <EmptyState icon={<TrendingUp size={20} color={Colors.textMuted} />}
             title="No data yet" description="Add loans to see detailed analysis."

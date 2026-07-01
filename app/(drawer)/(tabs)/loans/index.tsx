@@ -58,11 +58,12 @@ export default function LoansScreen() {
   const loans = data?.loans ?? [];
   const currencyCode = data?.profile?.currency ?? 'INR';
 
-  const totalOutstanding = loans.reduce((s, l) => s + l.outstandingBalance, 0);
-  const totalEMI = loans.reduce((s, l) => s + l.emiAmount, 0);
+  const activeLoans = loans.filter(l => l.outstandingBalance > 0);
+  const totalOutstanding = activeLoans.reduce((s, l) => s + l.outstandingBalance, 0);
+  const totalEMI = activeLoans.reduce((s, l) => s + l.emiAmount, 0);
   const avgRate = totalOutstanding > 0
-    ? loans.reduce((s, l) => s + l.interestRate * l.outstandingBalance, 0) / totalOutstanding : 0;
-  const highRateLoans = loans.filter(l => l.interestRate >= 12).length;
+    ? activeLoans.reduce((s, l) => s + l.interestRate * l.outstandingBalance, 0) / totalOutstanding : 0;
+  const highRateLoans = activeLoans.filter(l => l.interestRate >= 12).length;
   const loanColors = ['#059669', '#1E3A5F', '#F59E0B', '#378ADD', '#DC2626', '#34D399'];
 
   if (loading) {
@@ -147,14 +148,14 @@ export default function LoansScreen() {
 
       {/* Metrics */}
       <View style={s.metricsGrid}>
-        <MetricCard label="Active loans" value={loans.length} isEmpty={!loans.length} style={s.metricHalf} />
-        <MetricCard label="Outstanding" value={formatCurrency(totalOutstanding, currencyCode)} isEmpty={!loans.length} style={s.metricHalf} />
-        <MetricCard label="Monthly EMI" value={formatCurrency(totalEMI, currencyCode)} isEmpty={!loans.length} style={s.metricHalf} />
-        <MetricCard label="Avg rate" value={`${avgRate.toFixed(2)}%`} isEmpty={!loans.length} style={s.metricHalf} />
+        <MetricCard label="Active loans" value={activeLoans.length} isEmpty={!activeLoans.length} style={s.metricHalf} />
+        <MetricCard label="Outstanding" value={formatCurrency(totalOutstanding, currencyCode)} isEmpty={!activeLoans.length} style={s.metricHalf} />
+        <MetricCard label="Monthly EMI" value={formatCurrency(totalEMI, currencyCode)} isEmpty={!activeLoans.length} style={s.metricHalf} />
+        <MetricCard label="Avg rate" value={`${avgRate.toFixed(2)}%`} isEmpty={!activeLoans.length} style={s.metricHalf} />
       </View>
 
       {/* Risk watch */}
-      {loans.length > 0 && (
+      {activeLoans.length > 0 && (
         <View style={[s.riskBanner, highRateLoans > 0 ? s.riskWarn : s.riskOk]}>
           <View style={[s.riskDot, { backgroundColor: highRateLoans > 0 ? '#f59e0b' : '#059669' }]} />
           <View style={{ flex: 1 }}>
@@ -170,7 +171,7 @@ export default function LoansScreen() {
       )}
 
       {/* Loans list */}
-      {loans.length === 0 ? (
+      {activeLoans.length === 0 ? (
         <Card>
           <EmptyState icon={<Info size={20} color={Colors.slate} />}
             title="No loans tracked yet"
@@ -179,7 +180,7 @@ export default function LoansScreen() {
         </Card>
       ) : (
         <View style={s.loanGrid}>
-          {loans.map((loan, i) => {
+          {activeLoans.map((loan, i) => {
             const color = loanColors[i % 6];
             const pct = Math.round((1 - loan.outstandingBalance / Math.max(loan.principal, 1)) * 100);
             const loanCurrency = loan.currency || currencyCode;

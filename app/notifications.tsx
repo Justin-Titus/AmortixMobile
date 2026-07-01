@@ -8,19 +8,29 @@ import { Bell, CheckCheck, ArrowLeft, ExternalLink } from 'lucide-react-native';
 
 function formatNotificationDate(dateStr: string): string {
   const date = new Date(dateStr);
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   
-  const month = months[date.getMonth()];
-  const day = date.getDate();
-  
-  let hours = date.getHours();
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  const ampm = hours >= 12 ? 'PM' : 'AM';
-  
-  hours = hours % 12;
-  hours = hours ? hours : 12; // convert 0 to 12
-  
-  return `${month} ${day}, ${hours}:${minutes} ${ampm}`;
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    return date.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+      timeZone: tz || undefined
+    });
+  } catch (e) {
+    // Fallback to manual local formatting if Intl fails
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const month = months[date.getMonth()];
+    const day = date.getDate();
+    let hours = date.getHours();
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    return `${month} ${day}, ${hours}:${minutes} ${ampm}`;
+  }
 }
 
 export default function NotificationsScreen() {
@@ -142,6 +152,20 @@ export default function NotificationsScreen() {
           )
         }} 
       />
+
+      <View style={{ backgroundColor: '#f0f4f8', paddingHorizontal: 16, paddingVertical: 8, borderBottomWidth: 1, borderColor: '#e2e8f0' }}>
+        <Typography variant="caption" color="slate">
+          Debug: {(() => {
+            try {
+              const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+              const offset = new Date().getTimezoneOffset();
+              return `Timezone = ${tz} | Offset = ${offset} mins`;
+            } catch (e) {
+              return `Error: ${e instanceof Error ? e.message : String(e)}`;
+            }
+          })()}
+        </Typography>
+      </View>
 
       {loading ? (
         <View style={styles.center}>

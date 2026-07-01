@@ -85,8 +85,9 @@ export default function DashboardScreen() {
   const totalEMI = loans.reduce((s, l) => s + l.emiAmount, 0);
   const avgRate = totalOutstanding > 0
     ? loans.reduce((s, l) => s + l.interestRate * l.outstandingBalance, 0) / totalOutstanding : 0;
-  const hasLoans = loans.length > 0;
-  const debtFreeDate = hasLoans ? getProjectedPayoffDate(loans) : null;
+  const activeLoans = useMemo(() => loans.filter(l => l.outstandingBalance > 0), [loans]);
+  const hasLoans = activeLoans.length > 0;
+  const debtFreeDate = hasLoans ? getProjectedPayoffDate(activeLoans) : null;
   const projectedMonths = debtFreeDate ? Math.max(0, (debtFreeDate.getFullYear() - new Date().getFullYear()) * 12 + debtFreeDate.getMonth() - new Date().getMonth()) : 0;
 
   const emiToIncomeRatio = profile?.monthlyIncome
@@ -110,18 +111,18 @@ export default function DashboardScreen() {
       creditScoreRange: profile.creditScoreRange ?? 'Not provided',
       hasEmergencyFund: Boolean(profile.hasEmergencyFund),
       emergencyFundMonths: profile.emergencyFundMonths ?? 0,
-      loans: loans.map(l => ({
+      loans: activeLoans.map(l => ({
         annualRate: l.interestRate,
         tenureMonths: l.tenureMonths,
         rateType: l.rateType,
       })),
     });
-  }, [loans, profile, totalEMI]);
+  }, [activeLoans, profile, totalEMI]);
 
   const strategyResults = useMemo(() => {
     if (!hasLoans) return null;
-    const strategyLoans = loans
-      .filter(l => l.outstandingBalance > 0 && l.emiAmount > 0)
+    const strategyLoans = activeLoans
+      .filter(l => l.emiAmount > 0)
       .map(l => ({
         id: l.id,
         name: l.name,
@@ -136,7 +137,7 @@ export default function DashboardScreen() {
       snowball: calculateStrategy(strategyLoans, 0, 'snowball'),
       baseline: calculateStrategy(strategyLoans, 0, 'avalanche'), // Minimum payments
     };
-  }, [loans, hasLoans]);
+  }, [activeLoans, hasLoans]);
 
   const dynamicInsight = useMemo(() => {
     if (!hasLoans) return 'Add your first loan to see AI-powered debt insights.';
@@ -160,8 +161,8 @@ export default function DashboardScreen() {
       parts.push(`Financial health is in the ${affordability.zone.toLowerCase()} zone.`);
     }
 
-    return parts.join(' ') || `Managing ${formatCurrency(totalOutstanding, currencyCode)} across ${loans.length} active loans.`;
-  }, [hasLoans, strategyResults, affordability, totalOutstanding, loans.length, currencyCode]);
+    return parts.join(' ') || `Managing ${formatCurrency(totalOutstanding, currencyCode)} across ${activeLoans.length} active loans.`;
+  }, [hasLoans, strategyResults, affordability, totalOutstanding, activeLoans.length, currencyCode]);
 
   const distributionData = useMemo(() => {
     return loans
@@ -301,7 +302,7 @@ export default function DashboardScreen() {
         {/* Quick stats */}
         <View style={s.statsRow}>
           {[
-            { label: 'Open loans', value: String(loans.length) },
+            { label: 'Open loans', value: String(activeLoans.length) },
             { label: 'Outstanding', value: formatCompactCurrency(totalOutstanding, currencyCode) },
             { label: 'Avg rate', value: `${avgRate.toFixed(1)}%` },
           ].map((st) => (
@@ -388,7 +389,7 @@ export default function DashboardScreen() {
           </View>
 
           <View style={s.loansList}>
-            {loans.map((loan, index) => {
+            {activeLoans.map((loan, index) => {
               const pct = Math.max(0, Math.min(100, ((loan.principal - loan.outstandingBalance) / Math.max(loan.principal, 1)) * 100));
               const color = loanColors[index % loanColors.length];
               const loanCurrency = loan.currency || currencyCode;
@@ -514,8 +515,8 @@ export default function DashboardScreen() {
               <Typography variant="caption" color="slate" style={s.aiText}>
                 {emiToIncomeRatio > 40
                   ? `Your EMI obligations consume ${emiToIncomeRatio}% of income. Focus on high-cost balances.`
-                  : loans.length > 1
-                  ? `You have ${loans.length} active loans. Avalanche strategy saves the most interest.`
+                  : activeLoans.length > 1
+                  ? `You have ${activeLoans.length} active loans. Avalanche strategy saves the most interest.`
                   : `Allocating extra toward your outstanding debt can shorten payoff significantly.`}
               </Typography>
             </View>
