@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { uuidv4 } from '@/lib/utils';
+import { loanSchema, paymentSchema } from '@/lib/validations/schemas';
 
 export type LoanRecord = {
   id: string;
@@ -19,6 +20,7 @@ export type LoanRecord = {
   currency: string;
   createdAt: string;
   updatedAt: string;
+  workspaceId?: string | null;
   payments?: PaymentRecord[];
 };
 
@@ -45,6 +47,7 @@ export type LoanInput = {
   lender?: string | null;
   notes?: string | null;
   currency?: string;
+  workspaceId?: string | null;
 };
 
 export type PaymentInput = {
@@ -62,7 +65,6 @@ export async function getLoans(): Promise<LoanRecord[]> {
   const { data, error } = await supabase
     .from('Loan')
     .select('*')
-    .eq('userId', user.id)
     .order('createdAt', { ascending: false });
 
   if (error) {
@@ -81,7 +83,6 @@ export async function getLoan(id: string): Promise<LoanRecord | null> {
     .from('Loan')
     .select('*')
     .eq('id', id)
-    .eq('userId', user.id)
     .single();
 
   if (error) {
@@ -99,6 +100,11 @@ export async function getLoan(id: string): Promise<LoanRecord | null> {
 }
 
 export async function createLoan(input: LoanInput) {
+  const validated = loanSchema.safeParse(input);
+  if (!validated.success) {
+    return { error: validated.error.issues[0]?.message ?? 'Invalid loan data.' };
+  }
+
   const { data: { session } } = await supabase.auth.getSession();
   const user = session?.user;
   if (!user) return { error: 'You must be logged in to add a loan.' };
@@ -119,6 +125,7 @@ export async function createLoan(input: LoanInput) {
     lender: input.lender ?? null,
     notes: input.notes ?? null,
     currency: input.currency ?? 'INR',
+    workspaceId: input.workspaceId ?? null,
     createdAt: now,
     updatedAt: now,
   });
@@ -131,6 +138,11 @@ export async function createLoan(input: LoanInput) {
 }
 
 export async function updateLoan(id: string, input: LoanInput) {
+  const validated = loanSchema.safeParse(input);
+  if (!validated.success) {
+    return { error: validated.error.issues[0]?.message ?? 'Invalid loan data.' };
+  }
+
   const { data: { session } } = await supabase.auth.getSession();
   const user = session?.user;
   if (!user) return { error: 'You must be logged in to update a loan.' };
@@ -150,10 +162,10 @@ export async function updateLoan(id: string, input: LoanInput) {
       lender: input.lender ?? null,
       notes: input.notes ?? null,
       currency: input.currency ?? 'INR',
+      workspaceId: input.workspaceId ?? null,
       updatedAt: new Date().toISOString(),
     })
-    .eq('id', id)
-    .eq('userId', user.id);
+    .eq('id', id);
 
   if (error) {
     console.error('Failed to update loan:', error);
@@ -170,8 +182,7 @@ export async function deleteLoan(id: string) {
   const { error } = await supabase
     .from('Loan')
     .delete()
-    .eq('id', id)
-    .eq('userId', user.id);
+    .eq('id', id);
 
   if (error) {
     console.error('Failed to delete loan:', error);
@@ -181,6 +192,11 @@ export async function deleteLoan(id: string) {
 }
 
 export async function recordPayment(loanId: string, input: PaymentInput) {
+  const validatedPayment = paymentSchema.safeParse(input);
+  if (!validatedPayment.success) {
+    return { error: validatedPayment.error.issues[0]?.message ?? 'Invalid payment data.' };
+  }
+
   const { data: { session } } = await supabase.auth.getSession();
   const user = session?.user;
   if (!user) return { error: 'You must be logged in to record a payment.' };
@@ -190,7 +206,6 @@ export async function recordPayment(loanId: string, input: PaymentInput) {
     .from('Loan')
     .select('outstandingBalance, nextEmiDate')
     .eq('id', loanId)
-    .eq('userId', user.id)
     .single();
 
   if (fetchError || !loan) {
@@ -265,7 +280,6 @@ export async function getLoansWithPayments(): Promise<LoanRecord[]> {
   const { data, error } = await supabase
     .from('Loan')
     .select('*, payments:Payment(*)')
-    .eq('userId', user.id)
     .order('createdAt', { ascending: false });
 
   if (error) {

@@ -69,11 +69,8 @@ export default function RootLayout() {
     'IBMPlexMono-Medium': IBMPlexMono_500Medium,
   });
 
-  useEffect(() => {
-    if (loaded || error) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded, error]);
+  // We let the AppLoading screen hide the splash screen when it is mounted
+  // to achieve a seamless, flicker-free continuous loading transition.
 
   if (!loaded && !error) {
     return null;

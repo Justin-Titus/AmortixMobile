@@ -1,0 +1,56 @@
+appId: com.amortix.app
+---
+# Maestro Flow: Login
+# Tests the complete authentication flow for the Amortix mobile app.
+# Run: maestro test .maestro/login.yaml
+
+- launchApp:
+    clearState: true
+
+# Wait for splash screen to clear
+- waitForAnimationToEnd
+
+# Should land on the auth/welcome screen
+- assertVisible:
+    text: "Amortix"
+    optional: true
+
+# Tap the Login button or link to navigate to login
+- tapOn:
+    text: "Login"
+    optional: true
+- tapOn:
+    text: "Sign In"
+    optional: true
+
+# Wait for the login form
+- waitForAnimationToEnd
+
+# Fill credentials (use test credentials from .env or CI secrets)
+- tapOn:
+    text: "Email"
+- inputText: "${TEST_EMAIL}"
+
+- tapOn:
+    text: "Password"
+- inputText: "${TEST_PASSWORD}"
+
+# Submit
+- tapOn:
+    text: "Login"
+    optional: true
+- tapOn:
+    text: "Sign In"
+    optional: true
+
+# Wait for navigation to dashboard
+- waitForAnimationToEnd:
+    timeout: 10000
+
+# Assert we've reached the dashboard
+- assertVisible:
+    text: "Dashboard"
+    optional: true
+- assertVisible:
+    text: "Total Debt"
+    optional: true

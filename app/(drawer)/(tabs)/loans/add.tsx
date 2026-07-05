@@ -8,6 +8,7 @@ import { useNavigation } from '@react-navigation/native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { createLoan, getLoan, updateLoan } from '@/services/loans';
 import { getProfile } from '@/services/profile';
+import { getUserWorkspaces } from '@/services/workspace';
 import { clearCachedLoans } from '@/lib/offline/cache';
 import { Input } from '@/components/ui/Input';
 import { Colors, Radius, Spacing, Shadows } from '@/constants/theme';
@@ -36,6 +37,8 @@ export default function AddLoanScreen() {
   const [lender, setLender] = useState('');
   const [notes, setNotes] = useState('');
   const [currency, setCurrency] = useState('INR');
+  const [workspaceId, setWorkspaceId] = useState<string | null>(null);
+  const [workspaces, setWorkspaces] = useState<any[]>([]);
   
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -74,6 +77,11 @@ export default function AddLoanScreen() {
         if (isActive && p) {
           setCurrency(p.currency || 'INR');
         }
+        
+        // Fetch workspaces
+        const wsList = await getUserWorkspaces();
+        if (isActive) setWorkspaces(wsList);
+
         if (isActive && id) {
           const l = await getLoan(id);
           if (isActive && l) {
@@ -89,6 +97,7 @@ export default function AddLoanScreen() {
             setLender(l.lender || '');
             setNotes(l.notes || '');
             setCurrency(l.currency || p?.currency || 'INR');
+            setWorkspaceId(l.workspaceId || null);
           }
         }
         if (isActive) setLoading(false);
@@ -162,6 +171,7 @@ export default function AddLoanScreen() {
       lender: lender.trim() || null,
       notes: notes.trim() || null,
       currency,
+      workspaceId,
     };
 
     const result = id 
@@ -267,6 +277,36 @@ export default function AddLoanScreen() {
             </TouchableOpacity>
           ))}
         </ScrollView>
+
+        {workspaces.length > 0 && (
+          <>
+            <Typography variant="xs" weight="bold" color="navy" fontFamily="heading" style={s.label}>
+              ASSIGN TO WORKSPACE
+            </Typography>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.chipScroll}>
+              <TouchableOpacity
+                style={[s.chip, workspaceId === null && s.chipActive]}
+                onPress={() => setWorkspaceId(null)}
+              >
+                <Typography variant="xs" weight="bold" color={workspaceId === null ? 'white' : 'slate'}>
+                  Personal Space
+                </Typography>
+              </TouchableOpacity>
+
+              {workspaces.map(w => (
+                <TouchableOpacity
+                  key={w.workspaceId}
+                  style={[s.chip, workspaceId === w.workspaceId && s.chipActive]}
+                  onPress={() => setWorkspaceId(w.workspaceId)}
+                >
+                  <Typography variant="xs" weight="bold" color={workspaceId === w.workspaceId ? 'white' : 'slate'}>
+                    {w.workspace.name}
+                  </Typography>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </>
+        )}
 
         <Input label={`PRINCIPAL (${currentConfig.symbol})`} placeholder="e.g. 5000000" value={principal}
           onChangeText={(v) => { setPrincipal(v); if(fieldErrors.principal) setFieldErrors({...fieldErrors, principal: ''}); }} 

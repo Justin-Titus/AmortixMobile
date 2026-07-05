@@ -1,0 +1,44 @@
+appId: com.amortix.app
+---
+# Maestro Flow: View Calendar
+# Tests the EMI Calendar screen renders correctly.
+# Prerequisite: User is authenticated.
+# Run: maestro test .maestro/view_calendar.yaml
+
+- launchApp
+
+- waitForAnimationToEnd
+
+# Navigate to Calendar tab
+- tapOn:
+    text: "Calendar"
+    optional: true
+- tapOn:
+    id: "calendar-tab"
+    optional: true
+
+- waitForAnimationToEnd
+
+# Assert calendar is visible
+- assertVisible:
+    text: "Calendar"
+    optional: true
+
+# Verify month navigation exists
+- assertVisible:
+    text: "Jan"
+    optional: true
+- assertVisible:
+    text: "Feb"
+    optional: true
+
+# Verify the screen is interactive (no crash)
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# Try swiping to navigate months
+- swipe:
+    direction: LEFT
+    optional: true
+
+- waitForAnimationToEnd

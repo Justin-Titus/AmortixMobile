@@ -1,10 +1,12 @@
-import React, { useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View, ScrollView, TouchableOpacity, RefreshControl, StyleSheet,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { getLoans, type LoanRecord } from '@/services/loans';
 import { getProfile } from '@/services/profile';
+import { getUserWorkspaces, type WorkspaceRecord } from '@/services/workspace';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MetricCard } from '@/components/ui/MetricCard';
 import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -17,11 +19,57 @@ import {
 } from '@/lib/offline/cache';
 import OfflineBanner from '@/components/ui/OfflineBanner';
 import { formatCurrency } from '@/lib/calculations';
-import { Info, Plus, ExternalLink } from 'lucide-react-native';
+import { Info, Plus, ExternalLink, Briefcase, ChevronDown } from 'lucide-react-native';
 import { Skeleton } from '@/components/ui/Skeleton';
 
 export default function LoansScreen() {
   const router = useRouter();
+
+  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(null);
+  const [workspaces, setWorkspaces] = useState<{ workspaceId: string; workspace: WorkspaceRecord }[]>([]);
+  const [showWorkspaceDropdown, setShowWorkspaceDropdown] = useState(false);
+
+  const loadSelectedWorkspace = useCallback(async () => {
+    try {
+      const stored = await AsyncStorage.getItem('amortix_selected_workspace_id');
+      const wsList = await getUserWorkspaces();
+      setWorkspaces(wsList);
+
+      if (stored) {
+        const exists = wsList.some(w => w.workspaceId === stored);
+        if (exists) {
+          setSelectedWorkspaceId(stored);
+        } else {
+          await AsyncStorage.removeItem('amortix_selected_workspace_id');
+          setSelectedWorkspaceId(null);
+        }
+      } else {
+        setSelectedWorkspaceId(null);
+      }
+    } catch (err) {
+      console.error('Failed to load selected workspace:', err);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadSelectedWorkspace();
+    }, [loadSelectedWorkspace])
+  );
+
+  const handleSelectWorkspace = async (id: string | null) => {
+    try {
+      if (id === null) {
+        await AsyncStorage.removeItem('amortix_selected_workspace_id');
+      } else {
+        await AsyncStorage.setItem('amortix_selected_workspace_id', id);
+      }
+      setSelectedWorkspaceId(id);
+      setShowWorkspaceDropdown(false);
+    } catch (err) {
+      console.error('Failed to save selected workspace:', err);
+    }
+  };
 
   const fetcher = useCallback(async () => {
     const [loansData, profileData] = await Promise.all([getLoans(), getProfile()]);
@@ -58,7 +106,11 @@ export default function LoansScreen() {
   const loans = data?.loans ?? [];
   const currencyCode = data?.profile?.currency ?? 'INR';
 
-  const activeLoans = loans.filter(l => l.outstandingBalance > 0);
+  const filteredLoans = useMemo(() => {
+    return loans.filter(l => l.workspaceId === selectedWorkspaceId);
+  }, [loans, selectedWorkspaceId]);
+
+  const activeLoans = filteredLoans.filter(l => l.outstandingBalance > 0);
   const totalOutstanding = activeLoans.reduce((s, l) => s + l.outstandingBalance, 0);
   const totalEMI = activeLoans.reduce((s, l) => s + l.emiAmount, 0);
   const avgRate = totalOutstanding > 0
@@ -108,6 +160,8 @@ export default function LoansScreen() {
     );
   }
 
+  const activeWorkspaceName = workspaces.find(w => w.workspaceId === selectedWorkspaceId)?.workspace.name || 'Personal Space';
+
   return (
     <ScrollView 
       style={s.container}
@@ -117,6 +171,50 @@ export default function LoansScreen() {
     >
       {/* Offline Alert Banner */}
       {isOffline && <OfflineBanner lastSync={lastSync} />}
+
+      {/* Workspace Switcher */}
+      {workspaces.length > 0 && (
+        <View style={s.switcherContainer}>
+          <TouchableOpacity
+            style={s.switcherBtn}
+            onPress={() => setShowWorkspaceDropdown(!showWorkspaceDropdown)}
+            activeOpacity={0.8}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}>
+              <Briefcase size={14} color={Colors.emerald} />
+              <Typography variant="body" weight="bold" color="navy">
+                {activeWorkspaceName}
+              </Typography>
+            </View>
+            <ChevronDown size={14} color={Colors.slate} />
+          </TouchableOpacity>
+
+          {showWorkspaceDropdown && (
+            <View style={s.dropdownList}>
+              <TouchableOpacity
+                style={[s.dropdownItem, selectedWorkspaceId === null && s.dropdownItemActive]}
+                onPress={() => handleSelectWorkspace(null)}
+              >
+                <Typography variant="caption" weight="medium" color={selectedWorkspaceId === null ? 'white' : 'navy'}>
+                  Personal Space
+                </Typography>
+              </TouchableOpacity>
+
+              {workspaces.map((w) => (
+                <TouchableOpacity
+                  key={w.workspaceId}
+                  style={[s.dropdownItem, selectedWorkspaceId === w.workspaceId && s.dropdownItemActive]}
+                  onPress={() => handleSelectWorkspace(w.workspaceId)}
+                >
+                  <Typography variant="caption" weight="medium" color={selectedWorkspaceId === w.workspaceId ? 'white' : 'navy'}>
+                    {w.workspace.name}
+                  </Typography>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+        </View>
+      )}
 
       {/* Hero */}
       <View style={s.hero}>
@@ -275,5 +373,53 @@ const s = StyleSheet.create({
   progressFill: { height: 6, borderRadius: 3, backgroundColor: '#059669' },
   loanStats: { flexDirection: 'row', gap: Spacing.lg },
   loanStatValue: { marginTop: 4 },
+  switcherContainer: {
+    zIndex: 10,
+    width: '100%',
+    marginBottom: Spacing.xs,
+    position: 'relative'
+  },
+  switcherBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: Colors.white,
+    borderRadius: Radius.card,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    paddingHorizontal: Spacing.base,
+    paddingVertical: Spacing.sm,
+    shadowColor: '#09111f',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2
+  },
+  dropdownList: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    marginTop: 4,
+    backgroundColor: Colors.white,
+    borderRadius: Radius.card,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    padding: 6,
+    shadowColor: '#09111f',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 4,
+    zIndex: 20
+  },
+  dropdownItem: {
+    paddingHorizontal: Spacing.base,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radius.sm
+  },
+  dropdownItemActive: {
+    backgroundColor: Colors.emerald
+  }
 });
 

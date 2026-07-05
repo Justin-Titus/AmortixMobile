@@ -15,7 +15,7 @@ import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import Typography from '@/components/ui/Typography';
 import { Colors, Spacing, Radius, Shadows } from '@/constants/theme';
-import { Trash2, Edit3 } from 'lucide-react-native';
+import { Trash2, Edit3, CheckCircle2 } from 'lucide-react-native';
 import { LogPaymentCard } from '@/components/loans/LogPaymentCard';
 import { Skeleton } from '@/components/ui/Skeleton';
 
@@ -280,19 +280,33 @@ export default function LoanDetailScreen() {
       </Card>
 
       {/* Default Risk Card */}
-      {riskInput && <DefaultRiskCard riskInput={riskInput} currencyCode={loanCurrency} />}
+      {riskInput && loan.outstandingBalance > 0 && <DefaultRiskCard riskInput={riskInput} currencyCode={loanCurrency} />}
 
       {/* Prepayment Simulator */}
-      <PrepaymentSimulator
-        outstandingBalance={loan.outstandingBalance}
-        interestRate={loan.interestRate}
-        tenureMonths={loan.tenureMonths}
-        emiAmount={loan.emiAmount}
-        currencyCode={loanCurrency}
-      />
+      {loan.outstandingBalance > 0 && (
+        <PrepaymentSimulator
+          outstandingBalance={loan.outstandingBalance}
+          interestRate={loan.interestRate}
+          tenureMonths={loan.tenureMonths}
+          emiAmount={loan.emiAmount}
+          currencyCode={loanCurrency}
+        />
+      )}
 
       {/* Record Payment */}
-      <LogPaymentCard loanId={loan.id} defaultAmount={loan.emiAmount} onSuccess={loadData} currencyCode={loanCurrency} isOffline={isOffline} />
+      {loan.outstandingBalance > 0 ? (
+        <LogPaymentCard loanId={loan.id} defaultAmount={loan.emiAmount} onSuccess={loadData} currencyCode={loanCurrency} isOffline={isOffline} />
+      ) : (
+        <Card style={{ padding: Spacing.xl, alignItems: 'center', backgroundColor: '#ecfdf5', borderColor: '#a7f3d0', borderWidth: 1 }}>
+          <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#d1fae5', alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.sm }}>
+            <CheckCircle2 size={24} color={Colors.emerald} />
+          </View>
+          <Typography variant="body" weight="bold" color="navy">Loan Fully Settled</Typography>
+          <Typography variant="caption" color="slate" align="center" style={{ marginTop: 4 }}>
+            Congratulations! This loan has been completely paid off. No further action is required.
+          </Typography>
+        </Card>
+      )}
 
       {/* Payment History */}
       <Card>

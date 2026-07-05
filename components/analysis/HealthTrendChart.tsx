@@ -271,7 +271,7 @@ export default function HealthTrendChart({ snapshots }: { snapshots: HealthSnaps
     'worklet';
     const len = dtiLenRef.current;
     return {
-      strokeDasharray: `${len} ${len}`,
+      strokeDasharray: '5,5',
       strokeDashoffset: len * (1 - lineProgress.value),
     };
   });
@@ -280,7 +280,7 @@ export default function HealthTrendChart({ snapshots }: { snapshots: HealthSnaps
     'worklet';
     const len = projLenRef.current;
     return {
-      strokeDasharray: `${len} ${len}`,
+      strokeDasharray: '5,5',
       strokeDashoffset: len * (1 - projProgress.value),
     };
   });
@@ -354,6 +354,30 @@ export default function HealthTrendChart({ snapshots }: { snapshots: HealthSnaps
         </View>
       </View>
 
+      {/* Legend */}
+      <View style={styles.legendContainer}>
+        <View style={styles.legendItem}>
+          <View style={[styles.legendDot, { backgroundColor: '#10B981' }]} />
+          <Typography variant="xs" color="slate">
+            Health Score
+          </Typography>
+        </View>
+        <View style={styles.legendItem}>
+          <View style={styles.legendDashedLineContainer}>
+            <View style={[styles.legendDashedLine, { borderColor: '#10B981' }]} />
+          </View>
+          <Typography variant="xs" color="slate">
+            Projected
+          </Typography>
+        </View>
+        <View style={styles.legendItem}>
+          <View style={[styles.legendDot, { backgroundColor: '#F59E0B' }]} />
+          <Typography variant="xs" color="slate">
+            DTI Ratio (%)
+          </Typography>
+        </View>
+      </View>
+
       {/* SVG Plot */}
       <View style={styles.plotContainer}>
         <Svg width={chartWidth} height={chartHeight}>
@@ -418,6 +442,7 @@ export default function HealthTrendChart({ snapshots }: { snapshots: HealthSnaps
               fill="none"
               stroke="#F59E0B"
               strokeWidth="2.2"
+              strokeDasharray="5,5"
               animatedProps={dtiLineAnimProps}
             />
           ) : null}
@@ -429,7 +454,7 @@ export default function HealthTrendChart({ snapshots }: { snapshots: HealthSnaps
               fill="none"
               stroke="#10B981"
               strokeWidth="2.5"
-              strokeDasharray="4,4"
+              strokeDasharray="5,5"
               animatedProps={projLineAnimProps}
             />
           ) : null}
@@ -544,6 +569,40 @@ const styles = StyleSheet.create({
   rangeBtnActive: {
     backgroundColor: Colors.white,
     ...Shadows.metric,
+  },
+  legendContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    flexWrap: 'wrap',
+    columnGap: Spacing.md,
+    rowGap: Spacing.xs,
+    marginTop: Spacing.xs,
+    paddingBottom: Spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
+  legendDot: {
+    width: 8,
+    height: 8,
+    borderRadius: Radius.full,
+  },
+  legendDashedLineContainer: {
+    width: 14,
+    height: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  legendDashedLine: {
+    width: '100%',
+    borderWidth: 1,
+    borderRadius: 1,
+    borderStyle: 'dashed',
   },
   plotContainer: {
     alignItems: 'center',

@@ -153,20 +153,6 @@ export default function NotificationsScreen() {
         }} 
       />
 
-      <View style={{ backgroundColor: '#f0f4f8', paddingHorizontal: 16, paddingVertical: 8, borderBottomWidth: 1, borderColor: '#e2e8f0' }}>
-        <Typography variant="caption" color="slate">
-          Debug: {(() => {
-            try {
-              const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-              const offset = new Date().getTimezoneOffset();
-              return `Timezone = ${tz} | Offset = ${offset} mins`;
-            } catch (e) {
-              return `Error: ${e instanceof Error ? e.message : String(e)}`;
-            }
-          })()}
-        </Typography>
-      </View>
-
       {loading ? (
         <View style={styles.center}>
           <Typography color="slate">Loading notifications...</Typography>

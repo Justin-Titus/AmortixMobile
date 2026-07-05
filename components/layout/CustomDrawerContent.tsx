@@ -16,6 +16,7 @@ import {
   Sparkles,
   BookOpen,
   UserRound,
+  Users,
 } from 'lucide-react-native';
 
 const mainNavItems = [
@@ -26,6 +27,7 @@ const mainNavItems = [
   { icon: CalendarDays, label: 'EMI Calendar', href: '/(drawer)/(tabs)/calendar' },
   { icon: Activity, label: 'Insights', href: '/(drawer)/(tabs)/insights' },
   { icon: Sparkles, label: 'AI Advisor', href: '/(drawer)/(tabs)/chat' },
+  { icon: Users, label: 'Workspace', href: '/(drawer)/(tabs)/workspace' },
 ];
 
 const toolsNavItems = [

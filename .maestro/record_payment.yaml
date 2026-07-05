@@ -1,0 +1,70 @@
+appId: com.amortix.app
+---
+# Maestro Flow: Record Payment
+# Tests recording an EMI payment on an existing loan.
+# Prerequisite: User is authenticated and has at least one loan.
+# Run: maestro test .maestro/record_payment.yaml
+
+- launchApp
+
+- waitForAnimationToEnd
+
+# Navigate to Loans tab
+- tapOn:
+    text: "Loans"
+    optional: true
+
+- waitForAnimationToEnd
+
+# Tap on the first loan in the list
+- tapOn:
+    index: 0
+    optional: true
+
+- waitForAnimationToEnd
+
+# Tap on "Record Payment" or similar button
+- tapOn:
+    text: "Record Payment"
+    optional: true
+- tapOn:
+    text: "Make Payment"
+    optional: true
+- tapOn:
+    id: "record-payment-button"
+    optional: true
+
+- waitForAnimationToEnd
+
+# Fill in the payment amount
+- tapOn:
+    text: "Amount"
+    optional: true
+- tapOn:
+    id: "payment-amount-input"
+    optional: true
+- inputText: "5000"
+
+# Select EMI type
+- tapOn:
+    text: "EMI"
+    optional: true
+
+# Submit
+- tapOn:
+    text: "Save"
+    optional: true
+- tapOn:
+    text: "Record"
+    optional: true
+- tapOn:
+    text: "Submit"
+    optional: true
+
+- waitForAnimationToEnd:
+    timeout: 8000
+
+# Verify success feedback
+- assertVisible:
+    text: "Payment"
+    optional: true

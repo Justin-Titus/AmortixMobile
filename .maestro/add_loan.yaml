@@ -1,0 +1,107 @@
+appId: com.amortix.app
+---
+# Maestro Flow: Add Loan
+# Tests the complete "add a new loan" user journey.
+# Prerequisite: User is already authenticated (run after login.yaml).
+# Run: maestro test .maestro/add_loan.yaml
+
+- launchApp
+
+- waitForAnimationToEnd
+
+# Navigate to Loans tab
+- tapOn:
+    text: "Loans"
+    optional: true
+
+- waitForAnimationToEnd
+
+# Tap "Add Loan" button (+ FAB or button)
+- tapOn:
+    text: "Add Loan"
+    optional: true
+- tapOn:
+    id: "add-loan-button"
+    optional: true
+
+- waitForAnimationToEnd
+
+# Fill in Loan Name
+- tapOn:
+    text: "Loan Name"
+    optional: true
+- tapOn:
+    id: "loan-name-input"
+    optional: true
+- inputText: "Maestro Test Loan"
+
+# Select Loan Type
+- tapOn:
+    text: "Loan Type"
+    optional: true
+- tapOn:
+    text: "Personal"
+    optional: true
+
+# Fill Principal
+- tapOn:
+    text: "Principal Amount"
+    optional: true
+- tapOn:
+    id: "principal-input"
+    optional: true
+- inputText: "100000"
+
+# Fill Outstanding Balance
+- tapOn:
+    text: "Outstanding Balance"
+    optional: true
+- tapOn:
+    id: "outstanding-balance-input"
+    optional: true
+- inputText: "100000"
+
+# Fill Interest Rate
+- tapOn:
+    text: "Interest Rate"
+    optional: true
+- tapOn:
+    id: "interest-rate-input"
+    optional: true
+- inputText: "12"
+
+# Fill Tenure
+- tapOn:
+    text: "Tenure"
+    optional: true
+- tapOn:
+    id: "tenure-input"
+    optional: true
+- inputText: "24"
+
+# Fill EMI Amount
+- tapOn:
+    text: "EMI Amount"
+    optional: true
+- tapOn:
+    id: "emi-amount-input"
+    optional: true
+- inputText: "4707"
+
+# Submit the form
+- tapOn:
+    text: "Save"
+    optional: true
+- tapOn:
+    text: "Add Loan"
+    optional: true
+- tapOn:
+    text: "Submit"
+    optional: true
+
+- waitForAnimationToEnd:
+    timeout: 8000
+
+# Verify the loan appears in the list
+- assertVisible:
+    text: "Maestro Test Loan"

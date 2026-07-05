@@ -4,89 +4,105 @@ import { StatusBar } from 'expo-status-bar';
 import { Colors, Spacing, Radius, FontSizes } from '@/constants/theme';
 import Typography from './Typography';
 import { LandingBackdrop } from '@/components/landing/LandingBackdrop';
+import * as SplashScreen from 'expo-splash-screen';
 
 export function AppLoading() {
-  // Individual element animation values — container itself is always opacity:1
-  const logoScale = useRef(new Animated.Value(0.4)).current;
-  const logoOpacity = useRef(new Animated.Value(0)).current;
-  const titleTranslateY = useRef(new Animated.Value(18)).current;
+  // Anim values for continuous handshake transition
+  const backdropOpacity = useRef(new Animated.Value(0)).current;
+  const logoScale = useRef(new Animated.Value(1.0)).current;
+  const logoOpacity = useRef(new Animated.Value(1.0)).current; // Starts fully visible to match native splash
+  const titleTranslateY = useRef(new Animated.Value(24)).current;
   const titleOpacity = useRef(new Animated.Value(0)).current;
-  const subtitleTranslateY = useRef(new Animated.Value(12)).current;
+  const subtitleTranslateY = useRef(new Animated.Value(16)).current;
   const subtitleOpacity = useRef(new Animated.Value(0)).current;
   const spinnerOpacity = useRef(new Animated.Value(0)).current;
   const footerOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Small delay so the background renders first, then animate elements in
-    const timer = setTimeout(() => {
-      Animated.sequence([
-        // Step 1: Logo scales up with spring + fades in
-        Animated.parallel([
-          Animated.spring(logoScale, {
-            toValue: 1,
-            tension: 55,
-            friction: 8,
+    // 1. Instantly hide native splash now that React Native is rendering the matching frame
+    SplashScreen.hideAsync().catch(err => {
+      console.warn('Failed to hide splash screen:', err);
+    });
+
+    // 2. Play continuous animations
+    Animated.sequence([
+      // Step A: Fade in premium backdrop grid
+      Animated.timing(backdropOpacity, {
+        toValue: 1,
+        duration: 900,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+      // Step B: Bring in Typography & controls
+      Animated.parallel([
+        // Logo breath animation
+        Animated.sequence([
+          Animated.timing(logoScale, {
+            toValue: 1.06,
+            duration: 350,
+            easing: Easing.out(Easing.quad),
             useNativeDriver: true,
           }),
-          Animated.timing(logoOpacity, {
-            toValue: 1,
-            duration: 380,
-            easing: Easing.out(Easing.cubic),
+          Animated.spring(logoScale, {
+            toValue: 1.0,
+            tension: 40,
+            friction: 6,
             useNativeDriver: true,
           }),
         ]),
-        // Step 2: Title slides up
+        // Title slides up
         Animated.parallel([
           Animated.timing(titleTranslateY, {
             toValue: 0,
-            duration: 320,
+            duration: 450,
             easing: Easing.out(Easing.cubic),
             useNativeDriver: true,
           }),
           Animated.timing(titleOpacity, {
             toValue: 1,
-            duration: 320,
+            duration: 400,
             useNativeDriver: true,
           }),
         ]),
-        // Step 3: Subtitle + spinner + footer fade in
+        // Subtitle + Spinner + Footer fade in
         Animated.parallel([
           Animated.timing(subtitleTranslateY, {
             toValue: 0,
-            duration: 280,
+            duration: 400,
             easing: Easing.out(Easing.cubic),
             useNativeDriver: true,
           }),
           Animated.timing(subtitleOpacity, {
             toValue: 1,
-            duration: 280,
+            duration: 400,
             useNativeDriver: true,
           }),
           Animated.timing(spinnerOpacity, {
             toValue: 1,
-            duration: 400,
+            duration: 500,
             useNativeDriver: true,
           }),
           Animated.timing(footerOpacity, {
             toValue: 1,
-            duration: 500,
+            duration: 600,
             useNativeDriver: true,
           }),
         ]),
-      ]).start();
-    }, 80); // tiny delay so LandingBackdrop renders first
-
-    return () => clearTimeout(timer);
+      ]),
+    ]).start();
   }, []);
 
   return (
     <View style={styles.container}>
       <StatusBar style="dark" />
 
-      <LandingBackdrop />
+      {/* Background grid transitions in smoothly over solid white */}
+      <Animated.View style={[StyleSheet.absoluteFillObject, { opacity: backdropOpacity }]}>
+        <LandingBackdrop />
+      </Animated.View>
 
       <View style={styles.content}>
-        {/* Animated Logo */}
+        {/* Animated Logo (starts centered and sized matching the native splash) */}
         <Animated.View
           style={[
             styles.logoOuter,

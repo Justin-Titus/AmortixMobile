@@ -122,6 +122,14 @@ export default function TabsLayout() {
           href: null,
         }}
       />
+      <Tabs.Screen
+        name="workspace"
+        options={{
+          title: 'Workspace',
+          header: () => <DashboardHeader title="Workspace" context="Household collaboration" />,
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }
